@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/kevhlee/chip8/pkg/ch8"
+	"github.com/kevhlee/chip8/pkg/emu"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ func main() {
 				return nil
 			},
 			RunE: func(cmd *cobra.Command, args []string) error {
-				emu := ch8.NewEmulator()
+				emu := emu.NewEmulator()
 				emu.LoadROM(args[0])
 				return emu.Start()
 			},

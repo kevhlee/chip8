@@ -1,4 +1,4 @@
-package ch8
+package emu
 
 import (
 	"image/color"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/kevhlee/chip8/pkg/ch8"
 )
 
 var (
@@ -22,25 +23,31 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	vm *VirtualMachine
+	vm *ch8.VirtualMachine
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
 func NewEmulator() *Emulator {
 	return &Emulator{
-		vm: NewVirtualMachine(),
+		vm: ch8.NewVirtualMachine(),
 	}
 }
 
 // Start starts the emulator.
 func (emu *Emulator) Start() error {
-	ebiten.SetWindowSize(DisplayWidth*10, DisplayHeight*10)
+	ebiten.SetWindowSize(ch8.DisplayWidth*10, ch8.DisplayHeight*10)
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
-	go emu.startVM()
-	go emu.startTimers()
+	// Run VM separately at approximately 500 Hz
+	go func() {
+		for range time.Tick(2 * time.Millisecond) {
+			if err := emu.vm.RunCycle(); err != nil {
+				log.Println(err)
+			}
+		}
+	}()
 
 	return ebiten.RunGame(emu)
 }
@@ -56,14 +63,16 @@ func (emu *Emulator) Update() error {
 		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
 	}
 
+	emu.vm.UpdateTimers()
+
 	return nil
 }
 
 // Draw renders the screen of the emulator.
 func (emu *Emulator) Draw(screen *ebiten.Image) {
-	for y := 0; y < DisplayHeight; y++ {
-		for x := 0; x < DisplayWidth; x++ {
-			if emu.vm.Display[y*DisplayWidth+x] == 0x1 {
+	for y := 0; y < ch8.DisplayHeight; y++ {
+		for x := 0; x < ch8.DisplayWidth; x++ {
+			if emu.vm.Display[y*ch8.DisplayWidth+x] == 0x1 {
 				screen.Set(x, y, fg)
 			} else {
 				screen.Set(x, y, bg)
@@ -74,21 +83,5 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 
 // Layout returns the resolution of the emulator's screen.
 func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return DisplayWidth, DisplayHeight
-}
-
-func (emu *Emulator) startVM() {
-	// Run VM separately at approximately 500 Hz
-	for range time.Tick(2 * time.Millisecond) {
-		if err := emu.vm.RunCycle(); err != nil {
-			log.Println(err)
-		}
-	}
-}
-
-func (emu *Emulator) startTimers() {
-	// Run timers separately at approximately 60 Hz
-	for range time.Tick(16 * time.Millisecond) {
-		emu.vm.UpdateTimers()
-	}
+	return ch8.DisplayWidth, ch8.DisplayHeight
 }
