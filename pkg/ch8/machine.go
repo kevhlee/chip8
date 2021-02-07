@@ -287,9 +287,11 @@ func (vm *VirtualMachine) executeOp0x5(opcode uint) error {
 	if getN(opcode) != 0x0 {
 		return InvalidOpcodeError(opcode)
 	}
-	if vm.Registers[getX(opcode)] == getKK(opcode) {
+
+	if vm.Registers[getX(opcode)] == vm.Registers[getY(opcode)] {
 		vm.PC += 2
 	}
+
 	return nil
 }
 
@@ -358,9 +360,11 @@ func (vm *VirtualMachine) executeOp0x9(opcode uint) error {
 	if getN(opcode) != 0x0 {
 		return InvalidOpcodeError(opcode)
 	}
-	if vm.Registers[getX(opcode)] != getKK(opcode) {
+
+	if vm.Registers[getX(opcode)] != vm.Registers[getY(opcode)] {
 		vm.PC += 2
 	}
+
 	return nil
 }
 
