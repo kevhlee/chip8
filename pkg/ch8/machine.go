@@ -42,7 +42,7 @@ type VirtualMachine struct {
 	Memory      [MemorySize]uint
 	Registers   [NumberOfRegisters]uint
 	Keys        [NumberOfKeys]bool
-	Display     [NumberOfPixels]uint
+	Display     [DisplayHeight][DisplayWidth]bool
 	OpcodeExecs map[uint]func(uint) error
 }
 
@@ -53,7 +53,7 @@ func NewVirtualMachine() *VirtualMachine {
 		Stack:     [StackSize]uint{},
 		Registers: [NumberOfRegisters]uint{},
 		Keys:      [NumberOfKeys]bool{},
-		Display:   [NumberOfPixels]uint{},
+		Display:   [DisplayHeight][DisplayWidth]bool{},
 		Memory:    [MemorySize]uint{},
 	}
 
@@ -181,8 +181,10 @@ func (vm *VirtualMachine) Reset() {
 
 // ResetDisplay resets the state of the display.
 func (vm *VirtualMachine) ResetDisplay() {
-	for i := 0; i < len(vm.Display); i++ {
-		vm.Display[i] = 0x00
+	for y := 0; y < DisplayHeight; y++ {
+		for x := 0; x < DisplayWidth; x++ {
+			vm.Display[y][x] = false
+		}
 	}
 }
 
@@ -391,25 +393,23 @@ func (vm *VirtualMachine) executeOp0xC(opcode uint) error {
 func (vm *VirtualMachine) executeOp0xD(opcode uint) error {
 	vm.Registers[0xf] = 0x0
 
-	xStart := vm.Registers[getX(opcode)]
-	yStart := vm.Registers[getY(opcode)]
+	vx := vm.Registers[getX(opcode)]
+	vy := vm.Registers[getY(opcode)]
 
 	for n := uint(0); n < getN(opcode); n++ {
-		y := (yStart + n) % DisplayHeight
+		y := (vy + n) % DisplayHeight
 		sprite := vm.Memory[(vm.I+n)%MemorySize]
 
-		for i := 7; i >= 0; i-- {
-			x := (xStart + uint(i)) % DisplayWidth
-			idx := y*DisplayWidth + x
+		for i := 7; sprite > 0x00; i-- {
+			x := (vx + uint(i)) % DisplayWidth
 
-			bit := sprite & 0x1
-			sprite >>= 1
-
-			if bit&vm.Display[idx] == 0x1 {
+			bit := sprite&0x1 == 0x1
+			if bit && vm.Display[y][x] {
 				vm.Registers[0xf] = 0x1
 			}
 
-			vm.Display[idx] ^= bit
+			sprite >>= 1
+			vm.Display[y][x] = vm.Display[y][x] != bit
 		}
 	}
 

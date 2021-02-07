@@ -72,7 +72,7 @@ func (emu *Emulator) Update() error {
 func (emu *Emulator) Draw(screen *ebiten.Image) {
 	for y := 0; y < ch8.DisplayHeight; y++ {
 		for x := 0; x < ch8.DisplayWidth; x++ {
-			if emu.vm.Display[y*ch8.DisplayWidth+x] == 0x1 {
+			if emu.vm.Display[y][x] {
 				screen.Set(x, y, fg)
 			} else {
 				screen.Set(x, y, bg)
