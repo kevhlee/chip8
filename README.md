@@ -1,29 +1,5 @@
 # chip8
 
-A CHIP-8 emulator written in Go.
-
-## Setup
-
-To **build** the emulator, run the following command:
-
-```bash
-make
-```
-
-To **install** the emulator into your machine, run the following command:
-
-```bash
-make install
-```
-
-To **uninstall** from your machine, run the following command:
-
-```bash
-make uninstall
-```
-
-## Usage
-
 ```log
  ██████╗██╗  ██╗██╗██████╗        █████╗
 ██╔════╝██║  ██║██║██╔══██╗      ██╔══██╗
@@ -31,20 +7,31 @@ make uninstall
 ██║     ██╔══██║██║██╔═══╝ ╚════╝██╔══██╗
 ╚██████╗██║  ██║██║██║           ╚█████╔╝
  ╚═════╝╚═╝  ╚═╝╚═╝╚═╝            ╚════╝
+```
 
 A CHIP-8 emulator written in Go.
 
-Usage:
-  ch8 [command]
+## Setup
 
-Available Commands:
-  help        Help about any command
-  run         Run a CHIP-8 ROM
+This project requires Ebiten for rendering the emulator. Make sure to install
+all the [system dependencies](https://ebiten.org/documents/install.html) necessary to run Ebiten.
 
-Flags:
-  -h, --help   help for ch8
+**Building** the emulator:
 
-Use "ch8 [command] --help" for more information about a command.
+```bash
+make
+```
+
+**Installing** the emulator into your machine::
+
+```bash
+make install
+```
+
+**Uninstalling** the emulator from your machine:
+
+```bash
+make uninstall
 ```
 
 ## References
