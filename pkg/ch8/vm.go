@@ -3,9 +3,7 @@ package ch8
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
-	"time"
 )
 
 var (
@@ -38,8 +36,8 @@ type VirtualMachine struct {
 	I        uint
 	SP       uint
 	PC       uint
-	Delay    uint
-	Sound    uint
+	DT       uint
+	ST       uint
 	V        [NumberOfRegisters]uint
 	Stack    [StackSize]uint
 	Memory   [MemorySize]uint
@@ -78,15 +76,6 @@ func NewVirtualMachine() *VirtualMachine {
 	return vm
 }
 
-// Start starts the virtual machine.
-func (vm *VirtualMachine) Start() {
-	for range time.Tick(2 * time.Millisecond) {
-		if err := vm.RunCycle(); err != nil {
-			log.Println(err)
-		}
-	}
-}
-
 // RunCycle runs a single CPU cycle of the virtual machine.
 func (vm *VirtualMachine) RunCycle() error {
 	// Fetch-decode-execute
@@ -104,11 +93,11 @@ func (vm *VirtualMachine) RunCycle() error {
 
 // UpdateTimers updates the delay and sound timers.
 func (vm *VirtualMachine) UpdateTimers() {
-	if vm.Delay > 0x00 {
-		vm.Delay--
+	if vm.DT > 0x00 {
+		vm.DT--
 	}
-	if vm.Sound > 0x00 {
-		vm.Sound--
+	if vm.ST > 0x00 {
+		vm.ST--
 	}
 }
 
@@ -157,8 +146,8 @@ func (vm *VirtualMachine) Reset() {
 	vm.I = 0x000
 	vm.SP = 0x00
 	vm.PC = ProgramStartAddress
-	vm.Delay = 0x00
-	vm.Sound = 0x00
+	vm.DT = 0x00
+	vm.ST = 0x00
 
 	vm.ResetDisplay()
 
@@ -440,7 +429,7 @@ func (vm *VirtualMachine) executeOp0xF() error {
 
 	switch vm.decodeKK() {
 	case 0x07:
-		vm.V[x] = vm.Delay
+		vm.V[x] = vm.DT
 	case 0x0a:
 		for i, k := range vm.Keys {
 			if k {
@@ -450,9 +439,9 @@ func (vm *VirtualMachine) executeOp0xF() error {
 		}
 		vm.PC -= 0x2
 	case 0x15:
-		vm.Delay = vm.V[x]
+		vm.DT = vm.V[x]
 	case 0x18:
-		vm.Sound = vm.V[x]
+		vm.ST = vm.V[x]
 	case 0x1E:
 		vm.I = (vm.I + vm.V[x]) & 0xfff
 	case 0x29:
@@ -488,8 +477,8 @@ func (vm *VirtualMachine) PrintState() {
 	fmt.Printf("I:         0x%.3X\n", vm.I)
 	fmt.Printf("SP:        0x%.1X\n", vm.SP)
 	fmt.Printf("PC:        0x%.3X\n", vm.PC)
-	fmt.Printf("Delay:     0x%.2X\n", vm.Delay)
-	fmt.Printf("Sound:     0x%.2X\n", vm.Sound)
+	fmt.Printf("Delay:     0x%.2X\n", vm.DT)
+	fmt.Printf("Sound:     0x%.2X\n", vm.ST)
 
 	// Display call stack
 	if vm.SP > 0x0 {

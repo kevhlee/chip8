@@ -2,6 +2,7 @@ package emu
 
 import (
 	"image/color"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/kevhlee/chip8/pkg/ch8"
@@ -21,35 +22,29 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	vm    *ch8.VirtualMachine
-	sound *Sound
-	mute  bool
+	vm     *ch8.VirtualMachine
+	beeper *Beeper
+	mute   bool
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
 func NewEmulator(scale int, mute bool) *Emulator {
-	vm := ch8.NewVirtualMachine()
-
 	ebiten.SetWindowSize(ch8.DisplayWidth*scale, ch8.DisplayHeight*scale)
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
 	return &Emulator{
-		vm:    vm,
-		sound: NewSound(vm),
-		mute:  mute,
+		vm:     ch8.NewVirtualMachine(),
+		beeper: NewBeeper(DefaultFrequency, DefaultSampleRate),
+		mute:   mute,
 	}
 }
 
 // Start starts the emulator.
 func (emu *Emulator) Start() error {
-	go emu.vm.Start()
-
-	if !emu.mute {
-		go emu.sound.Start()
-	}
-
+	go emu.startVM()
+	go emu.startBeeper()
 	return ebiten.RunGame(emu)
 }
 
@@ -60,12 +55,8 @@ func (emu *Emulator) LoadROM(path string) error {
 
 // Update updates the state of the emulator.
 func (emu *Emulator) Update() error {
-	for key, hex := range keymap {
-		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
-	}
-
+	emu.handleKeys()
 	emu.vm.UpdateTimers()
-
 	return nil
 }
 
@@ -85,4 +76,30 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 // Layout returns the resolution of the emulator's screen.
 func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return ch8.DisplayWidth, ch8.DisplayHeight
+}
+
+func (emu *Emulator) startVM() {
+	for range time.Tick(2 * time.Millisecond) {
+		emu.vm.RunCycle()
+	}
+}
+
+func (emu *Emulator) startBeeper() {
+	if emu.mute {
+		return
+	}
+
+	for range time.Tick(2 * time.Millisecond) {
+		if emu.vm.ST > 0x00 {
+			emu.beeper.Play()
+		} else {
+			emu.beeper.Stop()
+		}
+	}
+}
+
+func (emu *Emulator) handleKeys() {
+	for key, hex := range keymap {
+		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
+	}
 }
