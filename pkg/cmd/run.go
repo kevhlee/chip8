@@ -23,13 +23,35 @@ func NewRunCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			emu := emu.NewEmulator()
+			scale, err := cmd.Flags().GetInt("scale")
+			if err != nil {
+				return err
+			}
+
+			mute, err := cmd.Flags().GetBool("mute")
+			if err != nil {
+				return err
+			}
+
+			emu := emu.NewEmulator(scale, mute)
 			if err := emu.LoadROM(args[0]); err != nil {
 				return err
 			}
 			return emu.Start()
 		},
 	}
+
+	runCmd.Flags().IntP(
+		"scale",
+		"s",
+		emu.DefaultScale,
+		"set the scale factor of the CHIP-8 screen",
+	)
+	runCmd.Flags().Bool(
+		"mute",
+		false,
+		"turn off the sound of the CHIP-8 emulator",
+	)
 
 	return runCmd
 }

@@ -23,27 +23,32 @@ var (
 type Emulator struct {
 	vm    *ch8.VirtualMachine
 	sound *Sound
+	mute  bool
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator() *Emulator {
+func NewEmulator(scale int, mute bool) *Emulator {
 	vm := ch8.NewVirtualMachine()
+
+	ebiten.SetWindowSize(ch8.DisplayWidth*scale, ch8.DisplayHeight*scale)
+	ebiten.SetWindowTitle("CHIP-8")
+	ebiten.SetMaxTPS(60)
+	ebiten.SetVsyncEnabled(true)
 
 	return &Emulator{
 		vm:    vm,
 		sound: NewSound(vm),
+		mute:  mute,
 	}
 }
 
 // Start starts the emulator.
 func (emu *Emulator) Start() error {
-	ebiten.SetWindowSize(ch8.DisplayWidth*10, ch8.DisplayHeight*10)
-	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetMaxTPS(60)
-	ebiten.SetVsyncEnabled(true)
-
 	go emu.vm.Start()
-	go emu.sound.Start()
+
+	if !emu.mute {
+		go emu.sound.Start()
+	}
 
 	return ebiten.RunGame(emu)
 }
