@@ -1,5 +1,7 @@
 # chip8
 
+A CHIP-8 emulator written in Go.
+
 ```log
  ██████╗██╗  ██╗██╗██████╗        █████╗
 ██╔════╝██║  ██║██║██╔══██╗      ██╔══██╗
@@ -9,12 +11,9 @@
  ╚═════╝╚═╝  ╚═╝╚═╝╚═╝            ╚════╝
 ```
 
-A CHIP-8 emulator written in Go.
-
 ## Setup
 
-This project requires Ebiten for rendering the emulator. Make sure to install
-all the [system dependencies](https://ebiten.org/documents/install.html) necessary to run Ebiten.
+This project requires [Ebiten](https://ebiten.org) for rendering the emulator. Make sure to install all the [system dependencies](https://ebiten.org/documents/install.html) necessary to run Ebiten.
 
 **Building** the emulator:
 
@@ -22,7 +21,7 @@ all the [system dependencies](https://ebiten.org/documents/install.html) necessa
 make
 ```
 
-**Installing** the emulator into your machine::
+**Installing** the emulator into your machine:
 
 ```bash
 make install
