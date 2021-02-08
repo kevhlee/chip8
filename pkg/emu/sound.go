@@ -77,6 +77,7 @@ type Sound struct {
 func NewSound(vm *ch8.VirtualMachine) *Sound {
 	audioContext := audio.NewContext(sampleRate)
 	audioPlayer, _ := audio.NewPlayer(audioContext, &stream{})
+	audioPlayer.SetVolume(0.25)
 
 	return &Sound{
 		vm:           vm,
