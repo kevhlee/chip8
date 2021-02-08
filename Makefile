@@ -18,15 +18,11 @@ test:
 ## Installation
 ##
 
-DESTDIR :=
-prefix  := /usr/local
-bindir  := ${prefix}/bin
-
 .PHONY: install
 install: build
-	install -d ${DESTDIR}${bindir}
-	install -m755 bin/ch8 ${DESTDIR}${bindir}/
+	install -d /usr/local/bin
+	install -m755 bin/ch8 /usr/local/bin
 
 .PHONY: uninstall
 uninstall:
-	rm -f ${DESTDIR}${bindir}/ch8
+	rm -f /usr/local/bin/ch8
