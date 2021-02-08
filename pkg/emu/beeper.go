@@ -6,11 +6,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
-// BeepStream is a sine wave byte stream played by the CHIP-8 beeper.
+// beepStream is a sine wave byte stream played by the CHIP-8 beeper.
 //
 // This struct is taken directly from Ebiten's example code:
 // <https://ebiten.org/examples/sinewave.html>
-type BeepStream struct {
+type beepStream struct {
 	frequency  int
 	sampleRate int
 	position   int64
@@ -18,7 +18,7 @@ type BeepStream struct {
 }
 
 // Read fills the byte stream with sine wave samples.
-func (s *BeepStream) Read(buf []byte) (int, error) {
+func (s *beepStream) Read(buf []byte) (int, error) {
 	if len(s.remaining) > 0 {
 		n := copy(buf, s.remaining)
 		s.remaining = s.remaining[n:]
@@ -55,7 +55,7 @@ func (s *BeepStream) Read(buf []byte) (int, error) {
 }
 
 // Close closes the bye stream.
-func (s *BeepStream) Close() error {
+func (s *beepStream) Close() error {
 	return nil
 }
 
@@ -70,7 +70,7 @@ func NewBeeper(frequency, sampleRate int) *Beeper {
 	audioContext := audio.NewContext(int(sampleRate))
 	audioPlayer, _ := audio.NewPlayer(
 		audioContext,
-		&BeepStream{
+		&beepStream{
 			frequency:  frequency,
 			sampleRate: sampleRate,
 		},

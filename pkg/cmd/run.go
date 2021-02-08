@@ -12,7 +12,7 @@ import (
 func NewRunCmd() *cobra.Command {
 	runCmd := &cobra.Command{
 		Use:   "run <path to ROM>",
-		Short: "Run a CHIP-8 ROM",
+		Short: "Run a CHIP-8 ROM file",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return fmt.Errorf("Input a path to a CHIP-8 ROM file")
@@ -22,28 +22,7 @@ func NewRunCmd() *cobra.Command {
 			}
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			scale, err := cmd.Flags().GetInt("scale")
-			if err != nil {
-				return err
-			}
-
-			mute, err := cmd.Flags().GetBool("mute")
-			if err != nil {
-				return err
-			}
-
-			debug, err := cmd.Flags().GetBool("debug")
-			if err != nil {
-				return err
-			}
-
-			emu := emu.NewEmulator(debug, scale, mute)
-			if err := emu.LoadROM(args[0]); err != nil {
-				return err
-			}
-			return emu.Start()
-		},
+		RunE: run,
 	}
 
 	runCmd.Flags().IntP(
@@ -64,4 +43,27 @@ func NewRunCmd() *cobra.Command {
 	)
 
 	return runCmd
+}
+
+func run(cmd *cobra.Command, args []string) error {
+	scale, err := cmd.Flags().GetInt("scale")
+	if err != nil {
+		return err
+	}
+
+	mute, err := cmd.Flags().GetBool("mute")
+	if err != nil {
+		return err
+	}
+
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return err
+	}
+
+	emu := emu.NewEmulator(debug, scale, mute)
+	if err := emu.LoadROM(args[0]); err != nil {
+		return err
+	}
+	return emu.Start()
 }

@@ -10,10 +10,9 @@ import (
 )
 
 var (
-	fg = color.RGBA{0x00, 0xff, 0x00, 0xff}
-	bg = color.RGBA{0x00, 0x00, 0x00, 0xff}
-
-	keymap = map[ebiten.Key]uint{
+	foreground = color.RGBA{0x00, 0xff, 0x00, 0xff}
+	background = color.RGBA{0x00, 0x00, 0x00, 0xff}
+	keymap     = map[ebiten.Key]uint{
 		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
 		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
 		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
@@ -27,28 +26,33 @@ type Emulator struct {
 	beeper *Beeper
 	mute   bool
 	debug  bool
+	scale  int
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
 func NewEmulator(debug bool, scale int, mute bool) *Emulator {
-	ebiten.SetWindowSize(ch8.DisplayWidth*scale, ch8.DisplayHeight*scale)
-	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetMaxTPS(60)
-	ebiten.SetVsyncEnabled(true)
-
 	return &Emulator{
 		vm:     ch8.NewVirtualMachine(),
 		beeper: NewBeeper(DefaultFrequency, DefaultSampleRate),
 		mute:   mute,
 		debug:  debug,
+		scale:  scale,
 	}
 }
 
 // Start starts the emulator.
 func (emu *Emulator) Start() error {
-	go emu.startVM()
+	ebiten.SetWindowSize(
+		ch8.DisplayWidth*emu.scale,
+		ch8.DisplayHeight*emu.scale,
+	)
+	ebiten.SetWindowTitle("CHIP-8")
+	ebiten.SetMaxTPS(60)
+	ebiten.SetVsyncEnabled(true)
+
 	go emu.startTimers()
 	go emu.startBeeper()
+	go emu.startVM()
 
 	return ebiten.RunGame(emu)
 }
@@ -71,9 +75,9 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 	for y := 0; y < ch8.DisplayHeight; y++ {
 		for x := 0; x < ch8.DisplayWidth; x++ {
 			if emu.vm.Display[y][x] {
-				screen.Set(x, y, fg)
+				screen.Set(x, y, foreground)
 			} else {
-				screen.Set(x, y, bg)
+				screen.Set(x, y, background)
 			}
 		}
 	}

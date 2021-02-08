@@ -33,6 +33,25 @@ make install
 make uninstall
 ```
 
+## Usage
+
+```log
+Usage:
+  ch8 [command]
+
+Examples:
+$ ch8 run roms/Logo.ch8
+
+Available Commands:
+  help        Help about any command
+  run         Run a CHIP-8 ROM file
+
+Flags:
+  -h, --help   help for ch8
+
+Use "ch8 [command] --help" for more information about a command.
+```
+
 ## References
 
 - [Cowgod's CHIP-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)
