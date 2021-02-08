@@ -33,7 +33,12 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
-			emu := emu.NewEmulator(scale, mute)
+			debug, err := cmd.Flags().GetBool("debug")
+			if err != nil {
+				return err
+			}
+
+			emu := emu.NewEmulator(debug, scale, mute)
 			if err := emu.LoadROM(args[0]); err != nil {
 				return err
 			}
@@ -51,6 +56,11 @@ func NewRunCmd() *cobra.Command {
 		"mute",
 		false,
 		"turn off the sound of the CHIP-8 emulator",
+	)
+	runCmd.Flags().Bool(
+		"debug",
+		false,
+		"set CHIP-8 emulator to debug mode",
 	)
 
 	return runCmd

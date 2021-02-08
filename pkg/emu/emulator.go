@@ -1,6 +1,7 @@
 package emu
 
 import (
+	"fmt"
 	"image/color"
 	"time"
 
@@ -25,10 +26,11 @@ type Emulator struct {
 	vm     *ch8.VirtualMachine
 	beeper *Beeper
 	mute   bool
+	debug  bool
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator(scale int, mute bool) *Emulator {
+func NewEmulator(debug bool, scale int, mute bool) *Emulator {
 	ebiten.SetWindowSize(ch8.DisplayWidth*scale, ch8.DisplayHeight*scale)
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(60)
@@ -38,6 +40,7 @@ func NewEmulator(scale int, mute bool) *Emulator {
 		vm:     ch8.NewVirtualMachine(),
 		beeper: NewBeeper(DefaultFrequency, DefaultSampleRate),
 		mute:   mute,
+		debug:  debug,
 	}
 }
 
@@ -70,6 +73,12 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 				screen.Set(x, y, bg)
 			}
 		}
+	}
+
+	if emu.debug {
+		ebiten.SetWindowTitle(
+			fmt.Sprintf("CHIP-8 | FPS: %.2f", ebiten.CurrentFPS()),
+		)
 	}
 }
 
