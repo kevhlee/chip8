@@ -35,51 +35,44 @@ var (
 
 // VirtualMachine is the CHIP-8 virtual machine.
 type VirtualMachine struct {
-	I           uint
-	SP          uint
-	PC          uint
-	Delay       uint
-	Sound       uint
-	Stack       [StackSize]uint
-	Memory      [MemorySize]uint
-	Registers   [NumberOfRegisters]uint
-	Keys        [NumberOfKeys]bool
-	Display     [DisplayHeight][DisplayWidth]bool
-	OpcodeExecs map[uint]func(uint) error
+	I        uint
+	SP       uint
+	PC       uint
+	Delay    uint
+	Sound    uint
+	V        [NumberOfRegisters]uint
+	Stack    [StackSize]uint
+	Memory   [MemorySize]uint
+	Keys     [NumberOfKeys]bool
+	Display  [DisplayHeight][DisplayWidth]bool
+	Opcode   uint
+	OpcodeFn map[uint]func() error
 }
 
 // NewVirtualMachine creates new CHIP-8 virtual machine instance.
 func NewVirtualMachine() *VirtualMachine {
 	vm := &VirtualMachine{
-		PC:        ProgramStartAddress,
-		Stack:     [StackSize]uint{},
-		Registers: [NumberOfRegisters]uint{},
-		Keys:      [NumberOfKeys]bool{},
-		Display:   [DisplayHeight][DisplayWidth]bool{},
-		Memory:    [MemorySize]uint{},
+		PC:      ProgramStartAddress,
+		Stack:   [StackSize]uint{},
+		V:       [NumberOfRegisters]uint{},
+		Keys:    [NumberOfKeys]bool{},
+		Display: [DisplayHeight][DisplayWidth]bool{},
+		Memory:  [MemorySize]uint{},
 	}
 
 	for i, b := range fonts {
 		vm.Memory[i] = b
 	}
 
-	vm.OpcodeExecs = map[uint]func(uint) error{
-		0x0: vm.executeOp0x0,
-		0x1: vm.executeOp0x1,
-		0x2: vm.executeOp0x2,
-		0x3: vm.executeOp0x3,
-		0x4: vm.executeOp0x4,
-		0x5: vm.executeOp0x5,
-		0x6: vm.executeOp0x6,
-		0x7: vm.executeOp0x7,
-		0x8: vm.executeOp0x8,
-		0x9: vm.executeOp0x9,
-		0xa: vm.executeOp0xA,
-		0xb: vm.executeOp0xB,
-		0xc: vm.executeOp0xC,
-		0xd: vm.executeOp0xD,
-		0xe: vm.executeOp0xE,
-		0xf: vm.executeOp0xF,
+	vm.OpcodeFn = map[uint]func() error{
+		0x0: vm.executeOp0x0, 0x1: vm.executeOp0x1,
+		0x2: vm.executeOp0x2, 0x3: vm.executeOp0x3,
+		0x4: vm.executeOp0x4, 0x5: vm.executeOp0x5,
+		0x6: vm.executeOp0x6, 0x7: vm.executeOp0x7,
+		0x8: vm.executeOp0x8, 0x9: vm.executeOp0x9,
+		0xa: vm.executeOp0xA, 0xb: vm.executeOp0xB,
+		0xc: vm.executeOp0xC, 0xd: vm.executeOp0xD,
+		0xe: vm.executeOp0xE, 0xf: vm.executeOp0xF,
 	}
 
 	return vm
@@ -96,14 +89,10 @@ func (vm *VirtualMachine) Start() {
 
 // RunCycle runs a single CPU cycle of the virtual machine.
 func (vm *VirtualMachine) RunCycle() error {
-	// Fetch next opcode
-	opcode := vm.fetch()
-
-	// Decode and execute opcode
-	execute := vm.decode(opcode)
-
-	// Execute opcode
-	err := execute(opcode)
+	// Fetch-decode-execute
+	vm.fetch()
+	execute := vm.decode()
+	err := execute()
 
 	// Keep program counter within range
 	if vm.PC > 0xfff {
@@ -152,7 +141,7 @@ func (vm *VirtualMachine) LoadOpcodes(opcodes []uint) error {
 	i := ProgramStartAddress
 	for _, opcode := range opcodes {
 		if opcode > 0xffff {
-			return InvalidOpcodeError(opcode)
+			return InvalidOpcodeError(vm.Opcode)
 		}
 
 		vm.Memory[i] = opcode >> 8
@@ -181,8 +170,8 @@ func (vm *VirtualMachine) Reset() {
 		vm.Stack[i] = 0x000
 	}
 
-	for i := 0; i < len(vm.Registers); i++ {
-		vm.Registers[i] = 0x00
+	for i := 0; i < len(vm.V); i++ {
+		vm.V[i] = 0x00
 	}
 
 	for i := ProgramStartAddress; i < len(vm.Memory); i++ {
@@ -199,63 +188,63 @@ func (vm *VirtualMachine) ResetDisplay() {
 	}
 }
 
-func (vm *VirtualMachine) fetch() uint {
+func (vm *VirtualMachine) fetch() {
 	opcode := (vm.Memory[vm.PC] << 8) | vm.Memory[vm.PC+1]
 	vm.PC += 0x2
-	return opcode
-}
-
-func (vm *VirtualMachine) decode(opcode uint) func(uint) error {
-	return vm.OpcodeExecs[getOp(opcode)]
+	vm.Opcode = opcode
 }
 
 //=====================================================================
 // Decode
 //=====================================================================
 
-func getOp(opcode uint) uint {
-	return opcode >> 0xc
+func (vm *VirtualMachine) decode() func() error {
+	return vm.OpcodeFn[vm.decodeOp()]
 }
 
-func getX(opcode uint) uint {
-	return (opcode >> 8) & 0xf
+func (vm *VirtualMachine) decodeX() uint {
+	return (vm.Opcode >> 8) & 0xf
 }
 
-func getY(opcode uint) uint {
-	return (opcode >> 4) & 0xf
+func (vm *VirtualMachine) decodeY() uint {
+	return (vm.Opcode >> 4) & 0xf
 }
 
-func getN(opcode uint) uint {
-	return opcode & 0xf
+func (vm *VirtualMachine) decodeN() uint {
+	return vm.Opcode & 0xf
 }
 
-func getKK(opcode uint) uint {
-	return opcode & 0xff
+func (vm *VirtualMachine) decodeOp() uint {
+	return vm.Opcode >> 0xc
 }
 
-func getNNN(opcode uint) uint {
-	return opcode & 0xfff
+func (vm *VirtualMachine) decodeKK() uint {
+	return vm.Opcode & 0xff
+}
+
+func (vm *VirtualMachine) decodeNNN() uint {
+	return vm.Opcode & 0xfff
 }
 
 //=====================================================================
 // Execute
 //=====================================================================
 
-func (vm *VirtualMachine) executeOp0x0(opcode uint) error {
-	switch getNNN(opcode) {
+func (vm *VirtualMachine) executeOp0x0() error {
+	switch vm.decodeNNN() {
 	case 0x0e0:
 		vm.ResetDisplay()
 	case 0x0ee:
 		vm.SP--
 		vm.PC = vm.Stack[vm.SP]
 	default:
-		return InvalidOpcodeError(opcode)
+		return InvalidOpcodeError(vm.Opcode)
 	}
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x1(opcode uint) error {
-	nnn := getNNN(opcode)
+func (vm *VirtualMachine) executeOp0x1() error {
+	nnn := vm.decodeNNN()
 
 	if nnn < ProgramStartAddress {
 		return InvalidJumpError(vm.PC, nnn)
@@ -266,8 +255,8 @@ func (vm *VirtualMachine) executeOp0x1(opcode uint) error {
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x2(opcode uint) error {
-	nnn := getNNN(opcode)
+func (vm *VirtualMachine) executeOp0x2() error {
+	nnn := vm.decodeNNN()
 
 	if vm.SP >= StackSize {
 		return InvalidStateError("Stack overflow")
@@ -282,132 +271,132 @@ func (vm *VirtualMachine) executeOp0x2(opcode uint) error {
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x3(opcode uint) error {
-	if vm.Registers[getX(opcode)] == getKK(opcode) {
+func (vm *VirtualMachine) executeOp0x3() error {
+	if vm.V[vm.decodeX()] == vm.decodeKK() {
 		vm.PC += 2
 	}
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x4(opcode uint) error {
-	if vm.Registers[getX(opcode)] != getKK(opcode) {
+func (vm *VirtualMachine) executeOp0x4() error {
+	if vm.V[vm.decodeX()] != vm.decodeKK() {
 		vm.PC += 2
 	}
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x5(opcode uint) error {
-	if getN(opcode) != 0x0 {
-		return InvalidOpcodeError(opcode)
+func (vm *VirtualMachine) executeOp0x5() error {
+	if vm.decodeN() != 0x0 {
+		return InvalidOpcodeError(vm.Opcode)
 	}
 
-	if vm.Registers[getX(opcode)] == vm.Registers[getY(opcode)] {
+	if vm.V[vm.decodeX()] == vm.V[vm.decodeY()] {
 		vm.PC += 2
 	}
 
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x6(opcode uint) error {
-	vm.Registers[getX(opcode)] = getKK(opcode)
+func (vm *VirtualMachine) executeOp0x6() error {
+	vm.V[vm.decodeX()] = vm.decodeKK()
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x7(opcode uint) error {
-	x := getX(opcode)
-	kk := getKK(opcode)
-	vm.Registers[x] = (vm.Registers[x] + kk) & 0xff
+func (vm *VirtualMachine) executeOp0x7() error {
+	x := vm.decodeX()
+	kk := vm.decodeKK()
+	vm.V[x] = (vm.V[x] + kk) & 0xff
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x8(opcode uint) error {
-	x := getX(opcode)
-	y := getY(opcode)
+func (vm *VirtualMachine) executeOp0x8() error {
+	x := vm.decodeX()
+	y := vm.decodeY()
 
-	switch getN(opcode) {
+	switch vm.decodeN() {
 	case 0x0:
-		vm.Registers[x] = vm.Registers[y]
+		vm.V[x] = vm.V[y]
 	case 0x1:
-		vm.Registers[x] |= vm.Registers[y]
+		vm.V[x] |= vm.V[y]
 	case 0x2:
-		vm.Registers[x] &= vm.Registers[y]
+		vm.V[x] &= vm.V[y]
 	case 0x3:
-		vm.Registers[x] ^= vm.Registers[y]
+		vm.V[x] ^= vm.V[y]
 	case 0x4:
-		result := vm.Registers[x] + vm.Registers[y]
+		result := vm.V[x] + vm.V[y]
 		if result > 0xff {
-			vm.Registers[0xf] = 0x1
-			vm.Registers[x] = result & 0xff
+			vm.V[0xf] = 0x1
+			vm.V[x] = result & 0xff
 		} else {
-			vm.Registers[0xf] = 0x0
-			vm.Registers[x] = result
+			vm.V[0xf] = 0x0
+			vm.V[x] = result
 		}
 	case 0x5:
-		if vm.Registers[x] > vm.Registers[y] {
-			vm.Registers[0xf] = 0x1
+		if vm.V[x] > vm.V[y] {
+			vm.V[0xf] = 0x1
 		} else {
-			vm.Registers[0xf] = 0x0
+			vm.V[0xf] = 0x0
 		}
-		vm.Registers[x] = (vm.Registers[x] - vm.Registers[y]) & 0xff
+		vm.V[x] = (vm.V[x] - vm.V[y]) & 0xff
 	case 0x6:
-		vm.Registers[0xf] = vm.Registers[x] & 0x01
-		vm.Registers[x] >>= 1
+		vm.V[0xf] = vm.V[x] & 0x01
+		vm.V[x] >>= 1
 	case 0x7:
-		if vm.Registers[x] < vm.Registers[y] {
-			vm.Registers[0xf] = 0x1
+		if vm.V[x] < vm.V[y] {
+			vm.V[0xf] = 0x1
 		} else {
-			vm.Registers[0xf] = 0x0
+			vm.V[0xf] = 0x0
 		}
-		vm.Registers[x] = (vm.Registers[y] - vm.Registers[x]) & 0xff
+		vm.V[x] = (vm.V[y] - vm.V[x]) & 0xff
 	case 0xe:
-		vm.Registers[0xf] = vm.Registers[x] >> 7
-		vm.Registers[x] = (vm.Registers[x] << 1) & 0xff
+		vm.V[0xf] = vm.V[x] >> 7
+		vm.V[x] = (vm.V[x] << 1) & 0xff
 	default:
-		return InvalidOpcodeError(opcode)
+		return InvalidOpcodeError(vm.Opcode)
 	}
 
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0x9(opcode uint) error {
-	if getN(opcode) != 0x0 {
-		return InvalidOpcodeError(opcode)
+func (vm *VirtualMachine) executeOp0x9() error {
+	if vm.decodeN() != 0x0 {
+		return InvalidOpcodeError(vm.Opcode)
 	}
 
-	if vm.Registers[getX(opcode)] != vm.Registers[getY(opcode)] {
+	if vm.V[vm.decodeX()] != vm.V[vm.decodeY()] {
 		vm.PC += 2
 	}
 
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0xA(opcode uint) error {
-	vm.I = getNNN(opcode)
+func (vm *VirtualMachine) executeOp0xA() error {
+	vm.I = vm.decodeNNN()
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0xB(opcode uint) error {
-	addr := (getNNN(opcode) + vm.Registers[0x0]) & 0xfff
+func (vm *VirtualMachine) executeOp0xB() error {
+	addr := (vm.decodeNNN() + vm.V[0x0]) & 0xfff
 	if addr < ProgramStartAddress {
 		return InvalidJumpError(vm.PC, addr)
 	}
 
-	vm.PC = (getNNN(opcode) + vm.Registers[0x0]) & 0xfff
+	vm.PC = (vm.decodeNNN() + vm.V[0x0]) & 0xfff
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0xC(opcode uint) error {
-	vm.Registers[getX(opcode)] = uint(rand.Int()&0xff) & getKK(opcode)
+func (vm *VirtualMachine) executeOp0xC() error {
+	vm.V[vm.decodeX()] = uint(rand.Int()&0xff) & vm.decodeKK()
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0xD(opcode uint) error {
-	vm.Registers[0xf] = 0x0
+func (vm *VirtualMachine) executeOp0xD() error {
+	vm.V[0xf] = 0x0
 
-	vx := vm.Registers[getX(opcode)]
-	vy := vm.Registers[getY(opcode)]
+	vx := vm.V[vm.decodeX()]
+	vy := vm.V[vm.decodeY()]
 
-	for n := uint(0); n < getN(opcode); n++ {
+	for n := uint(0); n < vm.decodeN(); n++ {
 		y := (vy + n) % DisplayHeight
 		sprite := vm.Memory[(vm.I+n)%MemorySize]
 
@@ -416,7 +405,7 @@ func (vm *VirtualMachine) executeOp0xD(opcode uint) error {
 
 			bit := sprite&0x1 == 0x1
 			if bit && vm.Display[y][x] {
-				vm.Registers[0xf] = 0x1
+				vm.V[0xf] = 0x1
 			}
 
 			sprite >>= 1
@@ -427,10 +416,10 @@ func (vm *VirtualMachine) executeOp0xD(opcode uint) error {
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0xE(opcode uint) error {
-	vx := vm.Registers[getX(opcode)]
+func (vm *VirtualMachine) executeOp0xE() error {
+	vx := vm.V[vm.decodeX()]
 
-	switch getKK(opcode) {
+	switch vm.decodeKK() {
 	case 0x9e:
 		if vm.Keys[vx] {
 			vm.PC += 0x2
@@ -440,45 +429,45 @@ func (vm *VirtualMachine) executeOp0xE(opcode uint) error {
 			vm.PC += 0x2
 		}
 	default:
-		return InvalidOpcodeError(opcode)
+		return InvalidOpcodeError(vm.Opcode)
 	}
 
 	return nil
 }
 
-func (vm *VirtualMachine) executeOp0xF(opcode uint) error {
-	x := getX(opcode)
+func (vm *VirtualMachine) executeOp0xF() error {
+	x := vm.decodeX()
 
-	switch getKK(opcode) {
+	switch vm.decodeKK() {
 	case 0x07:
-		vm.Registers[x] = vm.Delay
+		vm.V[x] = vm.Delay
 	case 0x0a:
 		for i, k := range vm.Keys {
 			if k {
-				vm.Registers[x] = uint(i)
+				vm.V[x] = uint(i)
 				return nil
 			}
 		}
 		vm.PC -= 0x2
 	case 0x15:
-		vm.Delay = vm.Registers[x]
+		vm.Delay = vm.V[x]
 	case 0x18:
-		vm.Sound = vm.Registers[x]
+		vm.Sound = vm.V[x]
 	case 0x1E:
-		vm.I = (vm.I + vm.Registers[x]) & 0xfff
+		vm.I = (vm.I + vm.V[x]) & 0xfff
 	case 0x29:
-		vm.I = vm.Registers[x] * FontSize
+		vm.I = vm.V[x] * FontSize
 	case 0x33:
-		vm.Memory[vm.I] = vm.Registers[x] / 100
-		vm.Memory[vm.I+1] = (vm.Registers[x] % 100) / 10
-		vm.Memory[vm.I+2] = vm.Registers[x] % 10
+		vm.Memory[vm.I] = vm.V[x] / 100
+		vm.Memory[vm.I+1] = (vm.V[x] % 100) / 10
+		vm.Memory[vm.I+2] = vm.V[x] % 10
 	case 0x55:
 		for i := uint(0); i <= x; i++ {
-			vm.Memory[vm.I+i] = vm.Registers[i]
+			vm.Memory[vm.I+i] = vm.V[i]
 		}
 	case 0x65:
 		for i := uint(0); i <= x; i++ {
-			vm.Registers[i] = vm.Memory[vm.I+i]
+			vm.V[i] = vm.Memory[vm.I+i]
 		}
 	}
 
@@ -517,7 +506,7 @@ func (vm *VirtualMachine) PrintState() {
 		fmt.Printf("\n  ")
 
 		for j := 0; j < 4; j++ {
-			fmt.Printf("|0x%.1X: 0x%.2X|", j*4+i, vm.Registers[j*4+i])
+			fmt.Printf("|0x%.1X: 0x%.2X|", j*4+i, vm.V[j*4+i])
 		}
 	}
 
