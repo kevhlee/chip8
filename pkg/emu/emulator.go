@@ -2,8 +2,6 @@ package emu
 
 import (
 	"image/color"
-	"log"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/kevhlee/chip8/pkg/ch8"
@@ -23,13 +21,17 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	vm *ch8.VirtualMachine
+	vm    *ch8.VirtualMachine
+	sound *Sound
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
 func NewEmulator() *Emulator {
+	vm := ch8.NewVirtualMachine()
+
 	return &Emulator{
-		vm: ch8.NewVirtualMachine(),
+		vm:    vm,
+		sound: NewSound(vm),
 	}
 }
 
@@ -40,14 +42,8 @@ func (emu *Emulator) Start() error {
 	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
-	// Run VM separately at approximately 500 Hz
-	go func() {
-		for range time.Tick(2 * time.Millisecond) {
-			if err := emu.vm.RunCycle(); err != nil {
-				log.Println(err)
-			}
-		}
-	}()
+	go emu.vm.Start()
+	go emu.sound.Start()
 
 	return ebiten.RunGame(emu)
 }

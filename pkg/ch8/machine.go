@@ -3,7 +3,9 @@ package ch8
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
+	"time"
 )
 
 var (
@@ -81,6 +83,15 @@ func NewVirtualMachine() *VirtualMachine {
 	}
 
 	return vm
+}
+
+// Start starts the virtual machine.
+func (vm *VirtualMachine) Start() {
+	for range time.Tick(2 * time.Millisecond) {
+		if err := vm.RunCycle(); err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 // RunCycle runs a single CPU cycle of the virtual machine.
