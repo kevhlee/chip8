@@ -78,11 +78,9 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	if emu.debug {
-		ebiten.SetWindowTitle(
-			fmt.Sprintf("CHIP-8 | FPS: %.2f", ebiten.CurrentFPS()),
-		)
-	}
+	ebiten.SetWindowTitle(
+		fmt.Sprintf("CHIP-8 | FPS: %.2f", ebiten.CurrentFPS()),
+	)
 }
 
 // Layout returns the resolution of the emulator's screen.
