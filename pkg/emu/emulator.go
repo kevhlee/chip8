@@ -47,7 +47,9 @@ func NewEmulator(debug bool, scale int, mute bool) *Emulator {
 // Start starts the emulator.
 func (emu *Emulator) Start() error {
 	go emu.startVM()
+	go emu.startTimers()
 	go emu.startBeeper()
+
 	return ebiten.RunGame(emu)
 }
 
@@ -58,8 +60,9 @@ func (emu *Emulator) LoadROM(path string) error {
 
 // Update updates the state of the emulator.
 func (emu *Emulator) Update() error {
-	emu.handleKeys()
-	emu.vm.UpdateTimers()
+	for key, hex := range keymap {
+		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
+	}
 	return nil
 }
 
@@ -93,22 +96,22 @@ func (emu *Emulator) startVM() {
 	}
 }
 
+func (emu *Emulator) startTimers() {
+	for range time.Tick(16 * time.Millisecond) {
+		emu.vm.UpdateTimers()
+	}
+}
+
 func (emu *Emulator) startBeeper() {
 	if emu.mute {
 		return
 	}
 
-	for range time.Tick(2 * time.Millisecond) {
+	for range time.Tick(16 * time.Millisecond) {
 		if emu.vm.ST > 0x00 {
 			emu.beeper.Play()
 		} else {
 			emu.beeper.Stop()
 		}
-	}
-}
-
-func (emu *Emulator) handleKeys() {
-	for key, hex := range keymap {
-		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
 	}
 }
