@@ -72,12 +72,12 @@ func (emu *Emulator) Update() error {
 
 // Draw renders the screen of the emulator.
 func (emu *Emulator) Draw(screen *ebiten.Image) {
+	screen.Fill(color.Black)
+
 	for y := 0; y < ch8.DisplayHeight; y++ {
 		for x := 0; x < ch8.DisplayWidth; x++ {
 			if emu.vm.Display[y][x] {
 				screen.Set(x, y, foreground)
-			} else {
-				screen.Set(x, y, background)
 			}
 		}
 	}
