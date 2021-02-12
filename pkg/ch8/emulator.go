@@ -1,12 +1,13 @@
-package emu
+package ch8
 
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/kevhlee/chip8/pkg/ch8"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
 var (
@@ -20,22 +21,82 @@ var (
 	}
 )
 
+// This struct is taken directly from Ebiten's example code:
+// <https://ebiten.org/examples/sinewave.html>
+type stream struct {
+	frequency  int
+	sampleRate int
+	position   int64
+	remaining  []byte
+}
+
+// Read fills the byte stream with sine wave samples.
+func (s *stream) Read(buf []byte) (int, error) {
+	if len(s.remaining) > 0 {
+		n := copy(buf, s.remaining)
+		s.remaining = s.remaining[n:]
+		return n, nil
+	}
+
+	var origBuf []byte
+	if len(buf)%4 > 0 {
+		origBuf = buf
+		buf = make([]byte, len(origBuf)+4-len(origBuf)%4)
+	}
+
+	length := int64(s.sampleRate / s.frequency)
+	p := s.position / 4
+	for i := 0; i < len(buf)/4; i++ {
+		const max = 32767
+		b := int16(math.Sin(2*math.Pi*float64(p)/float64(length)) * max)
+		buf[4*i] = byte(b)
+		buf[4*i+1] = byte(b >> 8)
+		buf[4*i+2] = byte(b)
+		buf[4*i+3] = byte(b >> 8)
+		p++
+	}
+
+	s.position += int64(len(buf))
+	s.position %= length * 4
+
+	if origBuf != nil {
+		n := copy(origBuf, buf)
+		s.remaining = buf[n:]
+		return n, nil
+	}
+	return len(buf), nil
+}
+
+// Close closes the bye stream.
+func (s *stream) Close() error {
+	return nil
+}
+
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	vm     *ch8.VirtualMachine
-	beeper *Beeper
+	vm     *VirtualMachine
+	beeper *audio.Player
 	mute   bool
-	debug  bool
 	scale  int
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator(debug bool, scale int, mute bool) *Emulator {
+func NewEmulator(scale int, mute bool) *Emulator {
+	// Initialize audio
+	audioContext := audio.NewContext(DefaultSampleRate)
+	audioPlayer, _ := audio.NewPlayer(
+		audioContext,
+		&stream{
+			frequency:  DefaultFrequency,
+			sampleRate: DefaultSampleRate,
+		},
+	)
+	audioPlayer.SetVolume(0.25)
+
 	return &Emulator{
-		vm:     ch8.NewVirtualMachine(),
-		beeper: NewBeeper(DefaultFrequency, DefaultSampleRate),
+		vm:     NewVirtualMachine(),
+		beeper: audioPlayer,
 		mute:   mute,
-		debug:  debug,
 		scale:  scale,
 	}
 }
@@ -43,8 +104,8 @@ func NewEmulator(debug bool, scale int, mute bool) *Emulator {
 // Start starts the emulator.
 func (emu *Emulator) Start() error {
 	ebiten.SetWindowSize(
-		ch8.DisplayWidth*emu.scale,
-		ch8.DisplayHeight*emu.scale,
+		DisplayWidth*emu.scale,
+		DisplayHeight*emu.scale,
 	)
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(60)
@@ -74,8 +135,8 @@ func (emu *Emulator) Update() error {
 func (emu *Emulator) Draw(screen *ebiten.Image) {
 	screen.Fill(color.Black)
 
-	for y := 0; y < ch8.DisplayHeight; y++ {
-		for x := 0; x < ch8.DisplayWidth; x++ {
+	for y := 0; y < DisplayHeight; y++ {
+		for x := 0; x < DisplayWidth; x++ {
 			if emu.vm.Display[y][x] {
 				screen.Set(x, y, foreground)
 			}
@@ -89,7 +150,7 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 
 // Layout returns the resolution of the emulator's screen.
 func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return ch8.DisplayWidth, ch8.DisplayHeight
+	return DisplayWidth, DisplayHeight
 }
 
 func (emu *Emulator) startVM() {
@@ -113,7 +174,7 @@ func (emu *Emulator) startBeeper() {
 		if emu.vm.ST > 0x00 {
 			emu.beeper.Play()
 		} else {
-			emu.beeper.Stop()
+			emu.beeper.Pause()
 		}
 	}
 }

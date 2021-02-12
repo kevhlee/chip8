@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kevhlee/chip8/pkg/emu"
+	"github.com/kevhlee/chip8/pkg/ch8"
 	"github.com/spf13/cobra"
 )
 
@@ -28,18 +28,13 @@ func NewRunCmd() *cobra.Command {
 	runCmd.Flags().IntP(
 		"scale",
 		"s",
-		emu.DefaultScale,
+		ch8.DefaultScale,
 		"set the scale factor of the CHIP-8 screen",
 	)
 	runCmd.Flags().Bool(
 		"mute",
 		false,
 		"turn off the sound of the CHIP-8 emulator",
-	)
-	runCmd.Flags().Bool(
-		"debug",
-		false,
-		"set CHIP-8 emulator to debug mode",
 	)
 
 	return runCmd
@@ -56,12 +51,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	debug, err := cmd.Flags().GetBool("debug")
-	if err != nil {
-		return err
-	}
-
-	emu := emu.NewEmulator(debug, scale, mute)
+	emu := ch8.NewEmulator(scale, mute)
 	if err := emu.LoadROM(args[0]); err != nil {
 		return err
 	}
