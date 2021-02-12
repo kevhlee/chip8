@@ -370,7 +370,7 @@ func (vm *VirtualMachine) executeOp0xB() error {
 		return InvalidJumpError(vm.PC, addr)
 	}
 
-	vm.PC = (vm.decodeNNN() + vm.V[0x0]) & 0xfff
+	vm.PC = addr
 	return nil
 }
 
