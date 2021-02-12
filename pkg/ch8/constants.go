@@ -1,12 +1,12 @@
 package ch8
 
 const (
-	// FontSize is the number of bytes in a built-in font.
+	// FontSize is the number of bytes in a CHIP-8 built-in font.
 	FontSize = 0x5
 
-	// StackSize is the maximum depth of the CHIP-8 virtual machine's
-	// call stack.
-	StackSize = 0x10
+	// MaxStackDepth is the maximum depth of the CHIP-8 virtual
+	// machine's call stack.
+	MaxStackDepth = 0x10
 
 	// MemorySize is the total amount of memory available in the CHIP-8
 	// virtual machine.

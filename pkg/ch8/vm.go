@@ -39,7 +39,7 @@ type VirtualMachine struct {
 	DT       uint
 	ST       uint
 	V        [NumberOfRegisters]uint
-	Stack    [StackSize]uint
+	Stack    [MaxStackDepth]uint
 	Memory   [MemorySize]uint
 	Keys     [NumberOfKeys]bool
 	Display  [DisplayHeight][DisplayWidth]bool
@@ -51,7 +51,7 @@ type VirtualMachine struct {
 func NewVirtualMachine() *VirtualMachine {
 	vm := &VirtualMachine{
 		PC:      ProgramStartAddress,
-		Stack:   [StackSize]uint{},
+		Stack:   [MaxStackDepth]uint{},
 		V:       [NumberOfRegisters]uint{},
 		Keys:    [NumberOfKeys]bool{},
 		Display: [DisplayHeight][DisplayWidth]bool{},
@@ -247,7 +247,7 @@ func (vm *VirtualMachine) executeOp0x1() error {
 func (vm *VirtualMachine) executeOp0x2() error {
 	nnn := vm.decodeNNN()
 
-	if vm.SP >= StackSize {
+	if vm.SP >= MaxStackDepth {
 		return InvalidStateError("Stack overflow")
 	} else if nnn < ProgramStartAddress {
 		return InvalidJumpError(vm.PC, nnn)
