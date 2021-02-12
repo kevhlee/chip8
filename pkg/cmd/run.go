@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -31,9 +32,10 @@ func NewRunCmd() *cobra.Command {
 		ch8.DefaultScale,
 		"set the scale factor of the CHIP-8 screen",
 	)
-	runCmd.Flags().Bool(
-		"mute",
-		false,
+	runCmd.Flags().Float64P(
+		"volume",
+		"v",
+		0.25,
 		"turn off the sound of the CHIP-8 emulator",
 	)
 
@@ -46,12 +48,14 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	mute, err := cmd.Flags().GetBool("mute")
+	volume, err := cmd.Flags().GetFloat64("volume")
 	if err != nil {
 		return err
+	} else if volume < 0.0 || volume > 1.0 {
+		return errors.New("Volume must be between [0.0, 1.0]")
 	}
 
-	emu := ch8.NewEmulator(scale, mute)
+	emu := ch8.NewEmulator(scale, volume)
 	if err := emu.LoadROM(args[0]); err != nil {
 		return err
 	}

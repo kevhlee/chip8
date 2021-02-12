@@ -76,12 +76,11 @@ func (s *stream) Close() error {
 type Emulator struct {
 	vm     *VirtualMachine
 	beeper *audio.Player
-	mute   bool
 	scale  int
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator(scale int, mute bool) *Emulator {
+func NewEmulator(scale int, volume float64) *Emulator {
 	// Initialize audio
 	audioContext := audio.NewContext(DefaultSampleRate)
 	audioPlayer, _ := audio.NewPlayer(
@@ -91,12 +90,11 @@ func NewEmulator(scale int, mute bool) *Emulator {
 			sampleRate: DefaultSampleRate,
 		},
 	)
-	audioPlayer.SetVolume(0.25)
+	audioPlayer.SetVolume(volume)
 
 	return &Emulator{
 		vm:     NewVirtualMachine(),
 		beeper: audioPlayer,
-		mute:   mute,
 		scale:  scale,
 	}
 }
@@ -166,7 +164,7 @@ func (emu *Emulator) startTimers() {
 }
 
 func (emu *Emulator) startBeeper() {
-	if emu.mute {
+	if emu.beeper.Volume() < 1e-6 {
 		return
 	}
 
