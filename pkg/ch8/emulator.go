@@ -3,6 +3,7 @@ package ch8
 import (
 	"fmt"
 	"image/color"
+	"log"
 	"math"
 	"time"
 
@@ -150,7 +151,9 @@ func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func (emu *Emulator) startVM() {
 	for range time.Tick(2 * time.Millisecond) {
-		emu.vm.RunCycle()
+		if err := emu.vm.RunCycle(); err != nil {
+			log.Println(err)
+		}
 	}
 }
 
