@@ -141,35 +141,51 @@ func (vm *VirtualMachine) LoadOpcodes(opcodes []uint) error {
 	return nil
 }
 
-// Reset resets the entire state of the virtual machine.
+// Reset resets the virtual machine.
+//
+// This preserves the program/opcodes already loaded in memory.
 func (vm *VirtualMachine) Reset() {
+	vm.ClearRegisters()
+	vm.ClearDisplay()
+	vm.ClearKeys()
+}
+
+// Clear clears the entire state of the virtual machine.
+func (vm *VirtualMachine) Clear() {
+	vm.Reset()
+	vm.ClearProgram()
+}
+
+// ClearKeys clears the state of the keys.
+func (vm *VirtualMachine) ClearKeys() {
+	for i := 0; i < len(vm.Keys); i++ {
+		vm.Keys[i] = false
+	}
+}
+
+// ClearProgram clears the program loaded in the virtual machine.
+func (vm *VirtualMachine) ClearProgram() {
+	for i := ProgramStartAddress; i < len(vm.Memory); i++ {
+		vm.Memory[i] = 0x00
+	}
+}
+
+// ClearRegisters clears all the registers, including the program
+// counter, timers, stack pointer.
+func (vm *VirtualMachine) ClearRegisters() {
 	vm.I = 0x000
 	vm.SP = 0x00
 	vm.PC = ProgramStartAddress
 	vm.DT = 0x00
 	vm.ST = 0x00
 
-	vm.ResetDisplay()
-
-	for i := 0; i < len(vm.Keys); i++ {
-		vm.Keys[i] = false
-	}
-
-	for i := 0; i < len(vm.Stack); i++ {
-		vm.Stack[i] = 0x000
-	}
-
 	for i := 0; i < len(vm.V); i++ {
 		vm.V[i] = 0x00
 	}
-
-	for i := ProgramStartAddress; i < len(vm.Memory); i++ {
-		vm.Memory[i] = 0x00
-	}
 }
 
-// ResetDisplay resets the state of the display.
-func (vm *VirtualMachine) ResetDisplay() {
+// ClearDisplay clears the state of the display.
+func (vm *VirtualMachine) ClearDisplay() {
 	for y := 0; y < DisplayHeight; y++ {
 		for x := 0; x < DisplayWidth; x++ {
 			vm.Display[y][x] = false
@@ -218,7 +234,7 @@ func (vm *VirtualMachine) decodeNNN() uint {
 func (vm *VirtualMachine) executeOp0x0() error {
 	switch vm.decodeNNN() {
 	case 0x0e0:
-		vm.ResetDisplay()
+		vm.ClearDisplay()
 	case 0x0ee:
 		vm.SP--
 		vm.PC = vm.Stack[vm.SP]
