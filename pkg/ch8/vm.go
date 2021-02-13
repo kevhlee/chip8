@@ -44,7 +44,7 @@ type VirtualMachine struct {
 	Keys     [NumberOfKeys]bool
 	Display  [DisplayHeight][DisplayWidth]bool
 	Opcode   uint
-	OpcodeFn map[uint]func() error
+	opcodeFn map[uint]func() error
 }
 
 // NewVirtualMachine creates new CHIP-8 virtual machine instance.
@@ -62,7 +62,7 @@ func NewVirtualMachine() *VirtualMachine {
 		vm.Memory[i] = b
 	}
 
-	vm.OpcodeFn = map[uint]func() error{
+	vm.opcodeFn = map[uint]func() error{
 		0x0: vm.executeOp0x0, 0x1: vm.executeOp0x1,
 		0x2: vm.executeOp0x2, 0x3: vm.executeOp0x3,
 		0x4: vm.executeOp0x4, 0x5: vm.executeOp0x5,
@@ -177,18 +177,18 @@ func (vm *VirtualMachine) ResetDisplay() {
 	}
 }
 
+//=====================================================================
+// CPU Cycle
+//=====================================================================
+
 func (vm *VirtualMachine) fetch() {
 	opcode := (vm.Memory[vm.PC] << 8) | vm.Memory[vm.PC+1]
 	vm.PC += 0x2
 	vm.Opcode = opcode
 }
 
-//=====================================================================
-// Decode
-//=====================================================================
-
 func (vm *VirtualMachine) decode() func() error {
-	return vm.OpcodeFn[vm.decodeOp()]
+	return vm.opcodeFn[vm.decodeOp()]
 }
 
 func (vm *VirtualMachine) decodeX() uint {
@@ -214,10 +214,6 @@ func (vm *VirtualMachine) decodeKK() uint {
 func (vm *VirtualMachine) decodeNNN() uint {
 	return vm.Opcode & 0xfff
 }
-
-//=====================================================================
-// Execute
-//=====================================================================
 
 func (vm *VirtualMachine) executeOp0x0() error {
 	switch vm.decodeNNN() {

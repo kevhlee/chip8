@@ -10,16 +10,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
-var (
-	foreground = color.White
-	background = color.Black
-	keymap     = map[ebiten.Key]uint{
-		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
-		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
-		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
-		ebiten.KeyZ: 0xc, ebiten.KeyX: 0xd, ebiten.KeyC: 0xe, ebiten.KeyV: 0xf,
-	}
-)
+//=====================================================================
+// Audio
+//=====================================================================
 
 // This struct is taken directly from Ebiten's example code:
 // <https://ebiten.org/examples/sinewave.html>
@@ -72,45 +65,49 @@ func (s *stream) Close() error {
 	return nil
 }
 
+//=====================================================================
+// Emulator
+//=====================================================================
+
+var (
+	foreground = color.White
+	background = color.Black
+
+	keymap = map[ebiten.Key]uint{
+		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
+		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
+		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
+		ebiten.KeyZ: 0xc, ebiten.KeyX: 0xd, ebiten.KeyC: 0xe, ebiten.KeyV: 0xf,
+	}
+)
+
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
 	vm     *VirtualMachine
 	beeper *audio.Player
-	scale  int
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
 func NewEmulator(scale int, volume float64) *Emulator {
 	// Initialize audio
-	audioContext := audio.NewContext(DefaultSampleRate)
-	audioPlayer, _ := audio.NewPlayer(
-		audioContext,
-		&stream{
-			frequency:  DefaultFrequency,
-			sampleRate: DefaultSampleRate,
-		},
+	beeper, _ := audio.NewPlayer(
+		audio.NewContext(DefaultSampleRate),
+		&stream{frequency: DefaultFrequency, sampleRate: DefaultSampleRate},
 	)
-	audioPlayer.SetVolume(volume)
+	beeper.SetVolume(volume)
 
-	return &Emulator{
-		vm:     NewVirtualMachine(),
-		beeper: audioPlayer,
-		scale:  scale,
-	}
-}
-
-// Start starts the emulator.
-func (emu *Emulator) Start() error {
-	ebiten.SetWindowSize(
-		DisplayWidth*emu.scale,
-		DisplayHeight*emu.scale,
-	)
+	// Initialize graphics
+	ebiten.SetWindowSize(DisplayWidth*scale, DisplayHeight*scale)
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
-	go emu.startTimers()
-	go emu.startBeeper()
+	return &Emulator{NewVirtualMachine(), beeper}
+}
+
+// Start starts the emulator.
+func (emu *Emulator) Start() error {
+	go emu.startIO()
 	go emu.startVM()
 
 	return ebiten.RunGame(emu)
@@ -131,7 +128,7 @@ func (emu *Emulator) Update() error {
 
 // Draw renders the screen of the emulator.
 func (emu *Emulator) Draw(screen *ebiten.Image) {
-	screen.Fill(color.Black)
+	screen.Fill(background)
 
 	for y := 0; y < DisplayHeight; y++ {
 		for x := 0; x < DisplayWidth; x++ {
@@ -157,18 +154,10 @@ func (emu *Emulator) startVM() {
 	}
 }
 
-func (emu *Emulator) startTimers() {
+func (emu *Emulator) startIO() {
 	for range time.Tick(16 * time.Millisecond) {
 		emu.vm.UpdateTimers()
-	}
-}
 
-func (emu *Emulator) startBeeper() {
-	if emu.beeper.Volume() < 1e-6 {
-		return
-	}
-
-	for range time.Tick(16 * time.Millisecond) {
 		if emu.vm.ST > 0x00 {
 			emu.beeper.Play()
 		} else {
