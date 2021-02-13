@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	foreground = color.RGBA{0x00, 0xff, 0x00, 0xff}
-	background = color.RGBA{0x00, 0x00, 0x00, 0xff}
+	foreground = color.White
+	background = color.Black
 	keymap     = map[ebiten.Key]uint{
 		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
 		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
