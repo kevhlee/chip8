@@ -46,6 +46,8 @@ func run(cmd *cobra.Command, args []string) error {
 	scale, err := cmd.Flags().GetInt("scale")
 	if err != nil {
 		return err
+	} else if scale < 1 {
+		return errors.New("Scale factor must be positive")
 	}
 
 	volume, err := cmd.Flags().GetFloat64("volume")
