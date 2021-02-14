@@ -70,15 +70,26 @@ func (s *stream) Close() error {
 // Emulator
 //=====================================================================
 
+const (
+	playEvent  = "play"
+	pauseEvent = "pause"
+	resetEvent = "reset"
+)
+
 var (
 	foreground = color.White
 	background = color.Black
 
-	keymap = map[ebiten.Key]uint{
+	keyHexMap = map[ebiten.Key]uint{
 		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
 		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
 		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
 		ebiten.KeyZ: 0xc, ebiten.KeyX: 0xd, ebiten.KeyC: 0xe, ebiten.KeyV: 0xf,
+	}
+	keyEventMap = map[ebiten.Key]string{
+		ebiten.KeyRightBracket: pauseEvent,
+		ebiten.KeyLeftBracket:  playEvent,
+		ebiten.KeyBackslash:    resetEvent,
 	}
 )
 
@@ -86,6 +97,7 @@ var (
 type Emulator struct {
 	vm     *VirtualMachine
 	beeper *audio.Player
+	vmChan chan string
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
@@ -103,7 +115,7 @@ func NewEmulator(scale int, volume float64) *Emulator {
 	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
-	return &Emulator{NewVirtualMachine(), beeper}
+	return &Emulator{NewVirtualMachine(), beeper, make(chan string)}
 }
 
 // Start starts the emulator.
@@ -121,7 +133,14 @@ func (emu *Emulator) LoadROM(path string) error {
 
 // Update updates the state of the emulator.
 func (emu *Emulator) Update() error {
-	for key, hex := range keymap {
+	for key, event := range keyEventMap {
+		if ebiten.IsKeyPressed(key) {
+			emu.vmChan <- event
+			return nil
+		}
+	}
+
+	for key, hex := range keyHexMap {
 		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
 	}
 	return nil
@@ -150,9 +169,27 @@ func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (emu *Emulator) startVM() {
+	pause := false
+
 	for range time.Tick(2 * time.Millisecond) {
-		if err := emu.vm.RunCycle(); err != nil {
-			log.Println(err)
+		select {
+		case event := <-emu.vmChan:
+			switch event {
+			case playEvent:
+				pause = false
+			case pauseEvent:
+				pause = true
+			case resetEvent:
+				emu.vm.Reset()
+			}
+		default:
+			if pause {
+				continue
+			}
+
+			if err := emu.vm.RunCycle(); err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
