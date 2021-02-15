@@ -36,7 +36,7 @@ func NewRunCmd() *cobra.Command {
 		"volume",
 		"v",
 		0.25,
-		"turn off the sound of the CHIP-8 emulator",
+		"set the volume of the CHIP-8 emulator",
 	)
 
 	return runCmd

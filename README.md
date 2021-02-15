@@ -83,7 +83,7 @@ Usage:
 Flags:
   -h, --help           help for run
   -s, --scale int      set the scale factor of the CHIP-8 screen (default 10)
-  -v, --volume float   turn off the sound of the CHIP-8 emulator (default 0.25)
+  -v, --volume float   set the volume of the CHIP-8 emulator (default 0.25)
 ```
 
 ### Key Mapping
