@@ -1,5 +1,7 @@
 package ch8
 
+import "time"
+
 const (
 	// FontSize is the number of bytes in a CHIP-8 built-in font.
 	FontSize = 0x5
@@ -55,4 +57,15 @@ const (
 	// DefaultSampleRate is the default sample rate of the CHIP-8
 	// beeper.
 	DefaultSampleRate = 44100
+
+	// DefaultTPS is the default ticks per second of the emulator.
+	DefaultTPS = 60
+
+	// DefaultHzVM is the default speed (in hertz) in which to run a
+	// CPU cycle of the CHIP-8 virtual machine.
+	DefaultHzVM = 2 * time.Millisecond
+
+	// DefaultHzI is the default speed (in hertz) in which to update
+	// the IO timers and audio.
+	DefaultHzIO = 16 * time.Millisecond
 )

@@ -105,14 +105,17 @@ func NewEmulator(scale int, volume float64) *Emulator {
 	// Initialize audio
 	beeper, _ := audio.NewPlayer(
 		audio.NewContext(DefaultSampleRate),
-		&stream{frequency: DefaultFrequency, sampleRate: DefaultSampleRate},
+		&stream{
+			frequency:  DefaultFrequency,
+			sampleRate: DefaultSampleRate,
+		},
 	)
 	beeper.SetVolume(volume)
 
 	// Initialize graphics
 	ebiten.SetWindowSize(DisplayWidth*scale, DisplayHeight*scale)
 	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetMaxTPS(60)
+	ebiten.SetMaxTPS(DefaultTPS)
 	ebiten.SetVsyncEnabled(true)
 
 	return &Emulator{NewVirtualMachine(), beeper, make(chan string)}
@@ -171,7 +174,7 @@ func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 func (emu *Emulator) startVM() {
 	pause := false
 
-	for range time.Tick(2 * time.Millisecond) {
+	for range time.Tick(DefaultHzVM) {
 		select {
 		case event := <-emu.vmChan:
 			switch event {
@@ -195,7 +198,7 @@ func (emu *Emulator) startVM() {
 }
 
 func (emu *Emulator) startIO() {
-	for range time.Tick(16 * time.Millisecond) {
+	for range time.Tick(DefaultHzIO) {
 		emu.vm.UpdateTimers()
 
 		if emu.vm.ST > 0x00 {
