@@ -4,7 +4,7 @@
 
 .PHONY: build
 build:
-	go build -o ./bin/ch8 ./cmd/ch8
+	go build -o ./bin/ch8 ./main.go
 
 .PHONY: clean
 clean:

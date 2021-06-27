@@ -12,6 +12,38 @@ import (
 )
 
 //=====================================================================
+// Constants
+//=====================================================================
+
+const (
+	// DefaultScale is the default scale factor of the CHIP-8 screen.
+	DefaultScale = 10
+
+	// DefaultVolume is the default volume of the CHIP-8 beeper.
+	//
+	// The volume ranges within [0.0, 1.0].
+	DefaultVolume = 0.5
+
+	// DefaultFrequency is the default frequency of the CHIP-8 beeper.
+	DefaultFrequency = 440
+
+	// DefaultSampleRate is the default sample rate of the CHIP-8
+	// beeper.
+	DefaultSampleRate = 44100
+
+	// DefaultTPS is the default ticks per second of the emulator.
+	DefaultTPS = 60
+
+	// DefaultHzVM is the default speed (in hertz) in which to run a
+	// CPU cycle of the CHIP-8 virtual machine.
+	DefaultHzVM = 2 * time.Millisecond
+
+	// DefaultHzI is the default speed (in hertz) in which to update
+	// the IO timers and audio.
+	DefaultHzIO = 16 * time.Millisecond
+)
+
+//=====================================================================
 // Audio
 //=====================================================================
 
