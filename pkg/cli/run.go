@@ -16,7 +16,7 @@ func NewRunCmd() *cobra.Command {
 		Short: "Run a CHIP-8 ROM file",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
-				return fmt.Errorf("Input a path to a CHIP-8 ROM file")
+				return fmt.Errorf("input a path to a CHIP-8 ROM file")
 			}
 			if _, err := os.Stat(args[0]); os.IsNotExist(err) {
 				return err
@@ -47,14 +47,14 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	} else if scale < 1 {
-		return errors.New("Scale factor must be positive")
+		return errors.New("scale factor must be positive")
 	}
 
 	volume, err := cmd.Flags().GetFloat64("volume")
 	if err != nil {
 		return err
 	} else if volume < 0.0 || volume > 1.0 {
-		return errors.New("Volume must be between [0.0, 1.0]")
+		return errors.New("volume must be between [0.0, 1.0]")
 	}
 
 	emu := ch8.NewEmulator(scale, volume)
