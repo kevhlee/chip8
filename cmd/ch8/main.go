@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/kevhlee/chip8/pkg/cmd"
+	"github.com/kevhlee/chip8/pkg/cli"
 )
 
 func main() {
-	rootCmd := cmd.NewRootCmd()
+	rootCmd := cli.NewRootCmd()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
