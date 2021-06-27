@@ -2,6 +2,8 @@
 
 A CHIP-8 emulator written in Go.
 
+![screenshot](https://user-images.githubusercontent.com/21070577/123540302-215be680-d6f3-11eb-84fa-72c4698c1691.png)
+
 ## Description
 
 CHIP-8 is an interpreted programming language designed in the late 1970s for writing games. It was designed to run on 8-bit systems such as the [COSMAC VIP](https://en.wikipedia.org/wiki/COSMAC_VIP). The CHIP-8 interpreter and programs are meant to run on a virtual machine, which consists of the following components:
