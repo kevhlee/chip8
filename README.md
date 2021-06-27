@@ -47,43 +47,18 @@ make uninstall
 A CLI is used to operate the emulator:
 
 ```log
- ██████╗██╗  ██╗██╗██████╗        █████╗
-██╔════╝██║  ██║██║██╔══██╗      ██╔══██╗
-██║     ███████║██║██████╔╝█████╗╚█████╔╝
-██║     ██╔══██║██║██╔═══╝ ╚════╝██╔══██╗
-╚██████╗██║  ██║██║██║           ╚█████╔╝
- ╚═════╝╚═╝  ╚═╝╚═╝╚═╝            ╚════╝
-
 A CHIP-8 emulator written in Go.
 
 Usage:
-  ch8 [command]
+  ch8 [flags]
 
 Examples:
-$ ch8 run roms/Logo.ch8
-
-Available Commands:
-  help        Help about any command
-  run         Run a CHIP-8 ROM file
+$ ch8 roms/Logo.ch8
 
 Flags:
-  -h, --help   help for ch8
-
-Use "ch8 [command] --help" for more information about a command.
-```
-
-The `run` command is used to run a CHIP-8 program. The command expects a `.ch8` file:
-
-```log
-Run a CHIP-8 ROM file
-
-Usage:
-  ch8 run <path to ROM> [flags]
-
-Flags:
-  -h, --help           help for run
+  -h, --help           help for ch8
   -s, --scale int      set the scale factor of the CHIP-8 screen (default 10)
-  -v, --volume float   set the volume of the CHIP-8 emulator (default 0.25)
+  -v, --volume float   set the volume of the CHIP-8 emulator (default 0.5)
 ```
 
 ### Key Mapping
