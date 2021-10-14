@@ -52,13 +52,13 @@ A CLI is used to operate the emulator:
 A CHIP-8 emulator written in Go.
 
 Usage:
-  ch8 [flags]
+  chip8 [flags]
 
 Examples:
-$ ch8 roms/Logo.ch8
+$ chip8 roms/Logo.ch8
 
 Flags:
-  -h, --help                help for ch8
+  -h, --help                help for chip8
       --hertz-io duration   set the speed of the IO timers. (default 16ms)
       --hertz-vm duration   set the speed of the virtual machine's CPU cycle. (default 2ms)
   -s, --scale int           set the scale factor of the screen (default 10)

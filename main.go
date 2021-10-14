@@ -12,8 +12,8 @@ func main() {
 	options := ch8.NewEmulatorOptions()
 
 	command := &cobra.Command{
-		Use:     "ch8",
-		Example: "$ ch8 roms/Logo.ch8",
+		Use:     "chip8",
+		Example: "$ chip8 roms/Logo.ch8",
 		Long:    "A CHIP-8 emulator written in Go.",
 		Args: func(cli *cobra.Command, args []string) error {
 			if len(args) < 1 {
