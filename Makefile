@@ -10,10 +10,6 @@ build:
 clean:
 	rm -rf bin
 
-.PHONY: test
-test:
-	go test ./pkg/...
-
 ##
 ## Installation
 ##
