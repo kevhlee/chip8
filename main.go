@@ -38,12 +38,42 @@ func main() {
 		},
 	}
 
+	initFlags(command, options)
+
+	if err := command.Execute(); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func initFlags(command *cobra.Command, options *ch8.EmulatorOptions) {
+	command.Flags().DurationVar(
+		&options.HertzIO,
+		"hertz-io",
+		ch8.DefaultHertzIO,
+		"set the speed of the IO timers.",
+	)
+
+	command.Flags().DurationVar(
+		&options.HertzVM,
+		"hertz-vm",
+		ch8.DefaultHertzVM,
+		"set the speed of the virtual machine's CPU cycle.",
+	)
+
+	command.Flags().IntVarP(
+		&options.MaxTPS,
+		"tps",
+		"t",
+		ch8.DefaultMaxTPS,
+		"set the max ticks-per-second (TPS) of the renderer",
+	)
+
 	command.Flags().IntVarP(
 		&options.Scale,
 		"scale",
 		"s",
 		ch8.DefaultScale,
-		"set the scale factor of the CHIP-8 screen",
+		"set the scale factor of the screen",
 	)
 
 	command.Flags().Float64VarP(
@@ -51,10 +81,6 @@ func main() {
 		"volume",
 		"v",
 		ch8.DefaultVolume,
-		"set the volume of the CHIP-8 emulator",
+		"set the volume of the emulator",
 	)
-
-	if err := command.Execute(); err != nil {
-		fmt.Println(err)
-	}
 }
