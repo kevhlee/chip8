@@ -1,6 +1,7 @@
 package ch8
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
 	"log"
@@ -164,8 +165,11 @@ type EmulatorOptions struct {
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator(options *EmulatorOptions) *Emulator {
-	// Initialize audio
+func NewEmulator(options *EmulatorOptions) (*Emulator, error) {
+	if err := checkOptions(options); err != nil {
+		return nil, err
+	}
+
 	beeper, _ := audio.NewPlayer(
 		audio.NewContext(options.SampleRate),
 		&stream{
@@ -175,13 +179,12 @@ func NewEmulator(options *EmulatorOptions) *Emulator {
 	)
 	beeper.SetVolume(options.Volume)
 
-	// Initialize graphics
 	ebiten.SetWindowSize(DisplayWidth*options.Scale, DisplayHeight*options.Scale)
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(options.MaxTPS)
 	ebiten.SetVsyncEnabled(true)
 
-	return &Emulator{beeper, options, NewVirtualMachine(), make(chan string)}
+	return &Emulator{beeper, options, NewVirtualMachine(), make(chan string)}, nil
 }
 
 func NewEmulatorOptions() *EmulatorOptions {
@@ -244,6 +247,18 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 // Layout returns the resolution of the emulator's screen.
 func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return DisplayWidth, DisplayHeight
+}
+
+func checkOptions(options *EmulatorOptions) error {
+	if options.Scale < 1 {
+		return errors.New("scale factor must be positive")
+	}
+
+	if options.Volume < 0.0 || options.Volume > 1.0 {
+		return errors.New("volume must be between [0, 1]")
+	}
+
+	return nil
 }
 
 func (emu *Emulator) startVM() {
