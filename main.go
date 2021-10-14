@@ -19,7 +19,11 @@ func main() {
 			scale, _ := cmd.Flags().GetInt("scale")
 			volume, _ := cmd.Flags().GetFloat64("volume")
 
-			emu := ch8.NewEmulator(scale, volume)
+			options := ch8.NewEmulatorOptions()
+			options.Scale = scale
+			options.Volume = volume
+
+			emu := ch8.NewEmulator(options)
 
 			if err := emu.LoadROM(args[0]); err != nil {
 				return err

@@ -19,7 +19,7 @@ const (
 	// DefaultFrequency is the default frequency of the CHIP-8 beeper.
 	DefaultFrequency = 440
 
-	// DefaultHertzI is the default speed (in hertz) in which to update
+	// DefaultHertzIO is the default speed (in hertz) in which to update
 	// the IO timers and audio.
 	DefaultHertzIO = 16 * time.Millisecond
 
@@ -27,15 +27,16 @@ const (
 	// CPU cycle of the CHIP-8 virtual machine.
 	DefaultHertzVM = 2 * time.Millisecond
 
+	// DefaultMaxTPS is the default max ticks-per-second (TPS) of the
+	// renderer.
+	DefaultMaxTPS = 60
+
 	// DefaultSampleRate is the default sample rate of the CHIP-8
 	// beeper.
 	DefaultSampleRate = 44100
 
 	// DefaultScale is the default scale factor of the CHIP-8 screen.
 	DefaultScale = 10
-
-	// DefaultTPS is the default ticks per second of the emulator.
-	DefaultTPS = 60
 
 	// DefaultVolume is the default volume of the CHIP-8 beeper.
 	//
@@ -127,30 +128,72 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	vm     *VirtualMachine
-	beeper *audio.Player
-	vmChan chan string
+	beeper  *audio.Player
+	options *EmulatorOptions
+	vm      *VirtualMachine
+	vmChan  chan string
+}
+
+// EmulatorOptions is a set of arguments that allows you to set
+// different options in the emulator.
+type EmulatorOptions struct {
+	// Frequency is the frequency of the CHIP-8 beeper.
+	Frequency int
+
+	// HertzIO is the speed (in hertz) in which to update the IO timers
+	// and audio.
+	HertzIO time.Duration
+
+	// HertzVM is the speed in which to run a CPU cycle of the CHIP-8
+	// virtual machine.
+	HertzVM time.Duration
+
+	// MaxTPS is the max ticks-per-second (TPS) of the renderer.
+	MaxTPS int
+
+	// SampleRate is the sample rate of the CHIP-8 beeper.
+	SampleRate int
+
+	// Scale is the scale factor of the CHIP-8 screen.
+	Scale int
+
+	// Volume is the volume of the CHIP-8 beeper.
+	//
+	// The volume ranges within [0.0, 1.0].
+	Volume float64
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator(scale int, volume float64) *Emulator {
+func NewEmulator(options *EmulatorOptions) *Emulator {
 	// Initialize audio
 	beeper, _ := audio.NewPlayer(
-		audio.NewContext(DefaultSampleRate),
+		audio.NewContext(options.SampleRate),
 		&stream{
-			frequency:  DefaultFrequency,
-			sampleRate: DefaultSampleRate,
+			frequency:  options.Frequency,
+			sampleRate: options.SampleRate,
 		},
 	)
-	beeper.SetVolume(volume)
+	beeper.SetVolume(options.Volume)
 
 	// Initialize graphics
-	ebiten.SetWindowSize(DisplayWidth*scale, DisplayHeight*scale)
+	ebiten.SetWindowSize(DisplayWidth*options.Scale, DisplayHeight*options.Scale)
 	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetMaxTPS(DefaultTPS)
+	ebiten.SetMaxTPS(options.MaxTPS)
 	ebiten.SetVsyncEnabled(true)
 
-	return &Emulator{NewVirtualMachine(), beeper, make(chan string)}
+	return &Emulator{beeper, options, NewVirtualMachine(), make(chan string)}
+}
+
+func NewEmulatorOptions() *EmulatorOptions {
+	return &EmulatorOptions{
+		Frequency:  DefaultFrequency,
+		HertzIO:    DefaultHertzIO,
+		HertzVM:    DefaultHertzVM,
+		MaxTPS:     DefaultMaxTPS,
+		SampleRate: DefaultSampleRate,
+		Scale:      DefaultScale,
+		Volume:     DefaultVolume,
+	}
 }
 
 // Start starts the emulator.
@@ -206,7 +249,7 @@ func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 func (emu *Emulator) startVM() {
 	pause := false
 
-	for range time.Tick(DefaultHzVM) {
+	for range time.Tick(emu.options.HertzVM) {
 		select {
 		case event := <-emu.vmChan:
 			switch event {
@@ -230,7 +273,7 @@ func (emu *Emulator) startVM() {
 }
 
 func (emu *Emulator) startIO() {
-	for range time.Tick(DefaultHzIO) {
+	for range time.Tick(emu.options.HertzIO) {
 		emu.vm.UpdateTimers()
 
 		if emu.vm.ST > 0x00 {
