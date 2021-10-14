@@ -129,10 +129,10 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	beeper  *audio.Player
-	options *EmulatorOptions
-	vm      *VirtualMachine
-	vmChan  chan string
+	beeper    *audio.Player
+	options   *EmulatorOptions
+	vm        *VirtualMachine
+	vmChannel chan string
 }
 
 // EmulatorOptions is a set of arguments that allows you to set
@@ -170,21 +170,11 @@ func NewEmulator(options *EmulatorOptions) (*Emulator, error) {
 		return nil, err
 	}
 
-	beeper, _ := audio.NewPlayer(
-		audio.NewContext(options.SampleRate),
-		&stream{
-			frequency:  options.Frequency,
-			sampleRate: options.SampleRate,
-		},
-	)
-	beeper.SetVolume(options.Volume)
-
-	ebiten.SetWindowSize(DisplayWidth*options.Scale, DisplayHeight*options.Scale)
-	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetMaxTPS(options.MaxTPS)
-	ebiten.SetVsyncEnabled(true)
-
-	return &Emulator{beeper, options, NewVirtualMachine(), make(chan string)}, nil
+	return &Emulator{
+		options:   options,
+		vm:        NewVirtualMachine(),
+		vmChannel: make(chan string),
+	}, nil
 }
 
 func NewEmulatorOptions() *EmulatorOptions {
@@ -200,7 +190,25 @@ func NewEmulatorOptions() *EmulatorOptions {
 }
 
 // Start starts the emulator.
-func (emu *Emulator) Start() error {
+func (emu *Emulator) Start() (err error) {
+	ebiten.SetWindowSize(DisplayWidth*emu.options.Scale, DisplayHeight*emu.options.Scale)
+	ebiten.SetWindowTitle("CHIP-8")
+	ebiten.SetMaxTPS(emu.options.MaxTPS)
+	ebiten.SetVsyncEnabled(true)
+
+	emu.beeper, err = audio.NewPlayer(
+		audio.NewContext(emu.options.SampleRate),
+		&stream{
+			frequency:  emu.options.Frequency,
+			sampleRate: emu.options.SampleRate,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	emu.beeper.SetVolume(emu.options.Volume)
+
 	go emu.startIO()
 	go emu.startVM()
 
@@ -216,7 +224,7 @@ func (emu *Emulator) LoadROM(path string) error {
 func (emu *Emulator) Update() error {
 	for key, event := range keyEventMap {
 		if ebiten.IsKeyPressed(key) {
-			emu.vmChan <- event
+			emu.vmChannel <- event
 			return nil
 		}
 	}
@@ -266,7 +274,7 @@ func (emu *Emulator) startVM() {
 
 	for range time.Tick(emu.options.HertzVM) {
 		select {
-		case event := <-emu.vmChan:
+		case event := <-emu.vmChannel:
 			switch event {
 			case playEvent:
 				pause = false
