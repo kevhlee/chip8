@@ -58,9 +58,12 @@ Examples:
 $ ch8 roms/Logo.ch8
 
 Flags:
-  -h, --help           help for ch8
-  -s, --scale int      set the scale factor of the CHIP-8 screen (default 10)
-  -v, --volume float   set the volume of the CHIP-8 emulator (default 0.5)
+  -h, --help                help for ch8
+      --hertz-io duration   set the speed of the IO timers. (default 16ms)
+      --hertz-vm duration   set the speed of the virtual machine's CPU cycle. (default 2ms)
+  -s, --scale int           set the scale factor of the screen (default 10)
+  -t, --tps int             set the max ticks-per-second (TPS) of the renderer (default 60)
+  -v, --volume float        set the volume of the emulator (default 0.5)
 ```
 
 ### Key Mapping
