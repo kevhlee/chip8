@@ -105,9 +105,9 @@ func (s *stream) Close() error {
 //=====================================================================
 
 const (
-	playEvent  = "play"
-	pauseEvent = "pause"
-	resetEvent = "reset"
+	EventPlay  EmulatorEvent = "play"
+	EventPause EmulatorEvent = "pause"
+	EventReset EmulatorEvent = "reset"
 )
 
 var (
@@ -120,10 +120,11 @@ var (
 		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
 		ebiten.KeyZ: 0xc, ebiten.KeyX: 0xd, ebiten.KeyC: 0xe, ebiten.KeyV: 0xf,
 	}
-	keyEventMap = map[ebiten.Key]string{
-		ebiten.KeyRightBracket: pauseEvent,
-		ebiten.KeyLeftBracket:  playEvent,
-		ebiten.KeyBackslash:    resetEvent,
+
+	keyEventMap = map[ebiten.Key]EmulatorEvent{
+		ebiten.KeyRightBracket: EventPause,
+		ebiten.KeyLeftBracket:  EventPlay,
+		ebiten.KeyBackslash:    EventReset,
 	}
 )
 
@@ -132,8 +133,12 @@ type Emulator struct {
 	beeper    *audio.Player
 	options   *EmulatorOptions
 	vm        *VirtualMachine
-	vmChannel chan string
+	vmChannel chan EmulatorEvent
 }
+
+// EmulatorEvent is an event that occurs that controls the state of the
+// emulator.
+type EmulatorEvent string
 
 // EmulatorOptions is a set of arguments that allows you to set
 // different options in the emulator.
@@ -173,7 +178,7 @@ func NewEmulator(options *EmulatorOptions) (*Emulator, error) {
 	return &Emulator{
 		options:   options,
 		vm:        NewVirtualMachine(),
-		vmChannel: make(chan string),
+		vmChannel: make(chan EmulatorEvent),
 	}, nil
 }
 
@@ -276,11 +281,11 @@ func (emu *Emulator) startVM() {
 		select {
 		case event := <-emu.vmChannel:
 			switch event {
-			case playEvent:
+			case EventPlay:
 				pause = false
-			case pauseEvent:
+			case EventPause:
 				pause = true
-			case resetEvent:
+			case EventReset:
 				emu.vm.Reset()
 			}
 		default:
