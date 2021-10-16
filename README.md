@@ -82,11 +82,12 @@ The following shows the keys that are virtually mapped to the CHIP-8 keypad:
 
 The emulator provides a few basic functions for control:
 
-| Key |      Description |
-| :-- | ---------------: |
-| `[` | Resume emulation |
-| `]` |  Pause emulation |
-| `\` |  Reset emulation |
+| Key   |         Description |
+|:------|--------------------:|
+| `[`   |    Resume emulation |
+| `]`   |     Pause emulation |
+| `\`   |     Reset emulation |
+| `Esc` | Terminate emulation |
 
 _Note: Pausing emulation will only pause the virtual machine. However, it will not pause the timers or keypad._
 

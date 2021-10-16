@@ -72,9 +72,10 @@ func (s *stream) Close() error {
 //=====================================================================
 
 const (
-	EventPlay  EmulatorEvent = "play"
-	EventPause EmulatorEvent = "pause"
-	EventReset EmulatorEvent = "reset"
+	EventPlay      EmulatorEvent = "play"
+	EventPause     EmulatorEvent = "pause"
+	EventReset     EmulatorEvent = "reset"
+	EventTerminate EmulatorEvent = "terminate"
 )
 
 var (
@@ -92,6 +93,7 @@ var (
 		ebiten.KeyRightBracket: EventPause,
 		ebiten.KeyLeftBracket:  EventPlay,
 		ebiten.KeyBackslash:    EventReset,
+		ebiten.KeyEscape:       EventTerminate,
 	}
 )
 
@@ -196,6 +198,10 @@ func (emu *Emulator) LoadROM(path string) error {
 func (emu *Emulator) Update() error {
 	for key, event := range keyEventMap {
 		if ebiten.IsKeyPressed(key) {
+			if event == EventTerminate {
+				return fmt.Errorf("Emulator terminated")
+			}
+
 			emu.vmChannel <- event
 			return nil
 		}
@@ -204,6 +210,7 @@ func (emu *Emulator) Update() error {
 	for key, hex := range keyHexMap {
 		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
 	}
+
 	return nil
 }
 
