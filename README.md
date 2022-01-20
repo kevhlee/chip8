@@ -63,7 +63,6 @@ Flags:
       --hertz-vm duration   set the speed of the virtual machine's CPU cycle. (default 2ms)
   -s, --scale int           set the scale factor of the screen (default 10)
   -t, --tps int             set the max ticks-per-second (TPS) of the renderer (default 60)
-  -v, --volume float        set the volume of the emulator (default 0.5)
 ```
 
 ### Key Mapping

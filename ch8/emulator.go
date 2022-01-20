@@ -5,67 +5,10 @@ import (
 	"fmt"
 	"image/color"
 	"log"
-	"math"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/audio"
 )
-
-//=====================================================================
-// Audio
-//=====================================================================
-
-// This struct is taken directly from Ebiten's example code:
-// <https://ebiten.org/examples/sinewave.html>
-type stream struct {
-	frequency  int
-	sampleRate int
-	position   int64
-	remaining  []byte
-}
-
-// Read fills the byte stream with sine wave samples.
-func (s *stream) Read(buf []byte) (int, error) {
-	if len(s.remaining) > 0 {
-		n := copy(buf, s.remaining)
-		s.remaining = s.remaining[n:]
-		return n, nil
-	}
-
-	var origBuf []byte
-	if len(buf)%4 > 0 {
-		origBuf = buf
-		buf = make([]byte, len(origBuf)+4-len(origBuf)%4)
-	}
-
-	length := int64(s.sampleRate / s.frequency)
-	p := s.position / 4
-	for i := 0; i < len(buf)/4; i++ {
-		const max = 32767
-		b := int16(math.Sin(2*math.Pi*float64(p)/float64(length)) * max)
-		buf[4*i] = byte(b)
-		buf[4*i+1] = byte(b >> 8)
-		buf[4*i+2] = byte(b)
-		buf[4*i+3] = byte(b >> 8)
-		p++
-	}
-
-	s.position += int64(len(buf))
-	s.position %= length * 4
-
-	if origBuf != nil {
-		n := copy(origBuf, buf)
-		s.remaining = buf[n:]
-		return n, nil
-	}
-	return len(buf), nil
-}
-
-// Close closes the bye stream.
-func (s *stream) Close() error {
-	return nil
-}
 
 //=====================================================================
 // Emulator
@@ -99,7 +42,6 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	beeper    *audio.Player
 	options   *EmulatorOptions
 	vm        *VirtualMachine
 	vmChannel chan EmulatorEvent
@@ -112,9 +54,6 @@ type EmulatorEvent string
 // EmulatorOptions is a set of arguments that allows you to set
 // different options in the emulator.
 type EmulatorOptions struct {
-	// Frequency is the frequency of the CHIP-8 beeper.
-	Frequency int
-
 	// HertzIO is the speed (in hertz) in which to update the IO timers
 	// and audio.
 	HertzIO time.Duration
@@ -126,16 +65,8 @@ type EmulatorOptions struct {
 	// MaxTPS is the max ticks-per-second (TPS) of the renderer.
 	MaxTPS int
 
-	// SampleRate is the sample rate of the CHIP-8 beeper.
-	SampleRate int
-
 	// Scale is the scale factor of the CHIP-8 screen.
 	Scale int
-
-	// Volume is the volume of the CHIP-8 beeper.
-	//
-	// The volume ranges within [0.0, 1.0].
-	Volume float64
 }
 
 // NewEmulator creates a new CHIP-8 emulator instance.
@@ -153,13 +84,10 @@ func NewEmulator(options *EmulatorOptions) (*Emulator, error) {
 
 func NewEmulatorOptions() *EmulatorOptions {
 	return &EmulatorOptions{
-		Frequency:  DefaultFrequency,
-		HertzIO:    DefaultHertzIO,
-		HertzVM:    DefaultHertzVM,
-		MaxTPS:     DefaultMaxTPS,
-		SampleRate: DefaultSampleRate,
-		Scale:      DefaultScale,
-		Volume:     DefaultVolume,
+		HertzIO: DefaultHertzIO,
+		HertzVM: DefaultHertzVM,
+		MaxTPS:  DefaultMaxTPS,
+		Scale:   DefaultScale,
 	}
 }
 
@@ -169,19 +97,6 @@ func (emu *Emulator) Start() (err error) {
 	ebiten.SetWindowTitle("CHIP-8")
 	ebiten.SetMaxTPS(emu.options.MaxTPS)
 	ebiten.SetVsyncEnabled(true)
-
-	emu.beeper, err = audio.NewPlayer(
-		audio.NewContext(emu.options.SampleRate),
-		&stream{
-			frequency:  emu.options.Frequency,
-			sampleRate: emu.options.SampleRate,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	emu.beeper.SetVolume(emu.options.Volume)
 
 	go emu.startIO()
 	go emu.startVM()
@@ -241,10 +156,6 @@ func checkOptions(options *EmulatorOptions) error {
 		return errors.New("scale factor must be positive")
 	}
 
-	if options.Volume < 0.0 || options.Volume > 1.0 {
-		return errors.New("volume must be between [0, 1]")
-	}
-
 	return nil
 }
 
@@ -277,11 +188,5 @@ func (emu *Emulator) startVM() {
 func (emu *Emulator) startIO() {
 	for range time.Tick(emu.options.HertzIO) {
 		emu.vm.UpdateTimers()
-
-		if emu.vm.ST > 0x00 {
-			emu.beeper.Play()
-		} else {
-			emu.beeper.Pause()
-		}
 	}
 }

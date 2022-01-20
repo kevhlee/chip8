@@ -75,12 +75,4 @@ func initFlags(command *cobra.Command, options *ch8.EmulatorOptions) {
 		ch8.DefaultScale,
 		"set the scale factor of the screen",
 	)
-
-	command.Flags().Float64VarP(
-		&options.Volume,
-		"volume",
-		"v",
-		ch8.DefaultVolume,
-		"set the volume of the emulator",
-	)
 }
