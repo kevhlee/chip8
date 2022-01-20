@@ -57,6 +57,8 @@ const (
 )
 
 var (
+	ErrTerminated = errors.New("Emulator terminated")
+
 	foreground = color.White
 	background = color.Black
 
@@ -131,7 +133,7 @@ func (emu *Emulator) Update() error {
 	for key, event := range keyEventMap {
 		if ebiten.IsKeyPressed(key) {
 			if event == eventTerminate {
-				return fmt.Errorf("Emulator terminated")
+				return ErrTerminated
 			}
 
 			emu.vmChannel <- event

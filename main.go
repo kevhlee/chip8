@@ -12,9 +12,11 @@ func main() {
 	options := ch8.NewEmulatorOptions()
 
 	command := &cobra.Command{
-		Use:     "chip8",
-		Example: "$ chip8 roms/Logo.ch8",
-		Long:    "A CHIP-8 emulator written in Go.",
+		Use:           "chip8",
+		Example:       "$ chip8 roms/Logo.ch8",
+		Long:          "A CHIP-8 emulator written in Go.",
+		SilenceErrors: true,
+		SilenceUsage:  true,
 		Args: func(cli *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return fmt.Errorf("input a path to a CHIP-8 ROM file")
@@ -41,7 +43,10 @@ func main() {
 	initFlags(command, options)
 
 	if err := command.Execute(); err != nil {
-		fmt.Println(err)
+		if err != ch8.ErrTerminated {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 
