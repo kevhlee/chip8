@@ -15,41 +15,21 @@ import (
 //=====================================================================
 
 const (
-	EventPlay      EmulatorEvent = "play"
-	EventPause     EmulatorEvent = "pause"
-	EventReset     EmulatorEvent = "reset"
-	EventTerminate EmulatorEvent = "terminate"
+	// DefaultHertzIO is the default speed (in hertz) in which to update
+	// the IO timers and audio.
+	DefaultHertzIO = 16 * time.Millisecond
+
+	// DefaultHertzVM is the default speed (in hertz) in which to run a
+	// CPU cycle of the CHIP-8 virtual machine.
+	DefaultHertzVM = 2 * time.Millisecond
+
+	// DefaultMaxTPS is the default max ticks-per-second (TPS) of the
+	// renderer.
+	DefaultMaxTPS = 60
+
+	// DefaultScale is the default scale factor of the CHIP-8 screen.
+	DefaultScale = 10
 )
-
-var (
-	foreground = color.White
-	background = color.Black
-
-	keyHexMap = map[ebiten.Key]uint{
-		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
-		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
-		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
-		ebiten.KeyZ: 0xc, ebiten.KeyX: 0xd, ebiten.KeyC: 0xe, ebiten.KeyV: 0xf,
-	}
-
-	keyEventMap = map[ebiten.Key]EmulatorEvent{
-		ebiten.KeyRightBracket: EventPause,
-		ebiten.KeyLeftBracket:  EventPlay,
-		ebiten.KeyBackslash:    EventReset,
-		ebiten.KeyEscape:       EventTerminate,
-	}
-)
-
-// Emulator is the CHIP-8 emulator.
-type Emulator struct {
-	options   *EmulatorOptions
-	vm        *VirtualMachine
-	vmChannel chan EmulatorEvent
-}
-
-// EmulatorEvent is an event that occurs that controls the state of the
-// emulator.
-type EmulatorEvent string
 
 // EmulatorOptions is a set of arguments that allows you to set
 // different options in the emulator.
@@ -68,6 +48,43 @@ type EmulatorOptions struct {
 	// Scale is the scale factor of the CHIP-8 screen.
 	Scale int
 }
+
+const (
+	eventPlay      EmulatorEvent = "play"
+	eventPause     EmulatorEvent = "pause"
+	eventReset     EmulatorEvent = "reset"
+	eventTerminate EmulatorEvent = "terminate"
+)
+
+var (
+	foreground = color.White
+	background = color.Black
+
+	keyHexMap = map[ebiten.Key]uint{
+		ebiten.Key1: 0x0, ebiten.Key2: 0x1, ebiten.Key3: 0x2, ebiten.Key4: 0x3,
+		ebiten.KeyQ: 0x4, ebiten.KeyW: 0x5, ebiten.KeyE: 0x6, ebiten.KeyR: 0x7,
+		ebiten.KeyA: 0x8, ebiten.KeyS: 0x9, ebiten.KeyD: 0xa, ebiten.KeyF: 0xb,
+		ebiten.KeyZ: 0xc, ebiten.KeyX: 0xd, ebiten.KeyC: 0xe, ebiten.KeyV: 0xf,
+	}
+
+	keyEventMap = map[ebiten.Key]EmulatorEvent{
+		ebiten.KeyRightBracket: eventPause,
+		ebiten.KeyLeftBracket:  eventPlay,
+		ebiten.KeyBackslash:    eventReset,
+		ebiten.KeyEscape:       eventTerminate,
+	}
+)
+
+// Emulator is the CHIP-8 emulator.
+type Emulator struct {
+	options   *EmulatorOptions
+	vm        *VirtualMachine
+	vmChannel chan EmulatorEvent
+}
+
+// EmulatorEvent is an event that occurs that controls the state of the
+// emulator.
+type EmulatorEvent string
 
 // NewEmulator creates a new CHIP-8 emulator instance.
 func NewEmulator(options *EmulatorOptions) (*Emulator, error) {
@@ -113,7 +130,7 @@ func (emu *Emulator) LoadROM(path string) error {
 func (emu *Emulator) Update() error {
 	for key, event := range keyEventMap {
 		if ebiten.IsKeyPressed(key) {
-			if event == EventTerminate {
+			if event == eventTerminate {
 				return fmt.Errorf("Emulator terminated")
 			}
 
@@ -166,11 +183,11 @@ func (emu *Emulator) startVM() {
 		select {
 		case event := <-emu.vmChannel:
 			switch event {
-			case EventPlay:
+			case eventPlay:
 				pause = false
-			case EventPause:
+			case eventPause:
 				pause = true
-			case EventReset:
+			case eventReset:
 				emu.vm.Reset()
 			}
 		default:
