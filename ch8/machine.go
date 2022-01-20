@@ -551,7 +551,7 @@ func (vm *VirtualMachine) executeOp0xF() error {
 }
 
 //=====================================================================
-// Misc.
+// Debugging
 //=====================================================================
 
 // PrintState prints the state of the virtual machine.
