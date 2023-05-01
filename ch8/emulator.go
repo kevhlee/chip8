@@ -21,9 +21,6 @@ type EmulatorOptions struct {
 	// virtual machine.
 	HertzVM time.Duration
 
-	// MaxTPS is the max ticks-per-second (TPS) of the renderer.
-	MaxTPS int
-
 	// Scale is the scale factor of the CHIP-8 screen.
 	Scale int
 }
@@ -84,7 +81,6 @@ func NewEmulatorOptions() *EmulatorOptions {
 	return &EmulatorOptions{
 		HertzIO: DefaultHertzIO,
 		HertzVM: DefaultHertzVM,
-		MaxTPS:  DefaultMaxTPS,
 		Scale:   DefaultScale,
 	}
 }
@@ -93,7 +89,7 @@ func NewEmulatorOptions() *EmulatorOptions {
 func (emu *Emulator) Start() (err error) {
 	ebiten.SetWindowSize(DisplayWidth*emu.options.Scale, DisplayHeight*emu.options.Scale)
 	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetMaxTPS(emu.options.MaxTPS)
+	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
 	go emu.startIO()
@@ -123,7 +119,6 @@ func (emu *Emulator) Update() error {
 	for key, hex := range keyHexMap {
 		emu.vm.Keys[hex] = ebiten.IsKeyPressed(key)
 	}
-
 	return nil
 }
 
@@ -153,7 +148,6 @@ func checkOptions(options *EmulatorOptions) error {
 	if options.Scale < 1 {
 		return errors.New("scale factor must be positive")
 	}
-
 	return nil
 }
 

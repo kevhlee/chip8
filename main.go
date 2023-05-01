@@ -66,14 +66,6 @@ func initFlags(command *cobra.Command, options *ch8.EmulatorOptions) {
 	)
 
 	command.Flags().IntVarP(
-		&options.MaxTPS,
-		"tps",
-		"t",
-		ch8.DefaultMaxTPS,
-		"set the max ticks-per-second (TPS) of the renderer",
-	)
-
-	command.Flags().IntVarP(
 		&options.Scale,
 		"scale",
 		"s",

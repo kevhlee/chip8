@@ -23,7 +23,7 @@ func InvalidStateError(msg string) error {
 
 // InvalidJumpError is an error caused by a program trying to jump to
 // an invalid memory location.
-func InvalidJumpError(fromAddr, toAddr uint) error {
+func InvalidJumpError(fromAddr, toAddr uint16) error {
 	return fmt.Errorf(
 		"invalid jump: Jump from %.3X to %.3X",
 		fromAddr,
@@ -33,7 +33,7 @@ func InvalidJumpError(fromAddr, toAddr uint) error {
 
 // InvalidOpcodeError is an error caused by the CHIP-8 virtual machine
 // trying to run an invalid opcode.
-func InvalidOpcodeError(opcode uint) error {
+func InvalidOpcodeError(opcode uint16) error {
 	return fmt.Errorf("invalid opcode: %.4X", opcode)
 }
 
@@ -41,34 +41,8 @@ func InvalidOpcodeError(opcode uint) error {
 // Virtual Machine
 //===========================================================================
 
-// VirtualMachine is the CHIP-8 virtual machine.
-type VirtualMachine struct {
-	I        uint
-	SP       uint
-	PC       uint
-	DT       uint
-	ST       uint
-	V        [NumberOfRegisters]uint
-	Stack    [MaxStackDepth]uint
-	Memory   [MemorySize]uint
-	Keys     [NumberOfKeys]bool
-	Display  [DisplayHeight][DisplayWidth]bool
-	Opcode   uint
-	opcodeFn map[uint]func() error
-}
-
-// NewVirtualMachine creates new CHIP-8 virtual machine instance.
-func NewVirtualMachine() *VirtualMachine {
-	vm := &VirtualMachine{
-		PC:      ProgramStartAddress,
-		Stack:   [MaxStackDepth]uint{},
-		V:       [NumberOfRegisters]uint{},
-		Keys:    [NumberOfKeys]bool{},
-		Display: [DisplayHeight][DisplayWidth]bool{},
-		Memory:  [MemorySize]uint{},
-	}
-
-	fonts := []uint{
+var (
+	fonts = []uint8{
 		0xf0, 0x90, 0x90, 0x90, 0xf0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
 		0xf0, 0x10, 0xf0, 0x80, 0xf0, // 2
@@ -86,38 +60,44 @@ func NewVirtualMachine() *VirtualMachine {
 		0xf0, 0x80, 0xf0, 0x80, 0xf0, // E
 		0xf0, 0x80, 0xf0, 0x80, 0x80, // F
 	}
+)
+
+// VirtualMachine is the CHIP-8 virtual machine.
+type VirtualMachine struct {
+	I       uint16
+	SP      uint8
+	PC      uint16
+	DT      uint8
+	ST      uint8
+	Opcode  uint16
+	V       [NumberOfRegisters]uint8
+	Stack   [MaxStackDepth]uint16
+	Memory  [MemorySize]uint8
+	Keys    [NumberOfKeys]bool
+	Display [DisplayHeight][DisplayWidth]bool
+}
+
+// NewVirtualMachine creates new CHIP-8 virtual machine instance.
+func NewVirtualMachine() *VirtualMachine {
+	vm := &VirtualMachine{
+		PC:      ProgramStartAddress,
+		Stack:   [MaxStackDepth]uint16{},
+		V:       [NumberOfRegisters]uint8{},
+		Keys:    [NumberOfKeys]bool{},
+		Display: [DisplayHeight][DisplayWidth]bool{},
+		Memory:  [MemorySize]uint8{},
+	}
 
 	for i, b := range fonts {
 		vm.Memory[i] = b
 	}
-
-	vm.opcodeFn = map[uint]func() error{
-		0x0: vm.executeOp0x0, 0x1: vm.executeOp0x1,
-		0x2: vm.executeOp0x2, 0x3: vm.executeOp0x3,
-		0x4: vm.executeOp0x4, 0x5: vm.executeOp0x5,
-		0x6: vm.executeOp0x6, 0x7: vm.executeOp0x7,
-		0x8: vm.executeOp0x8, 0x9: vm.executeOp0x9,
-		0xa: vm.executeOp0xA, 0xb: vm.executeOp0xB,
-		0xc: vm.executeOp0xC, 0xd: vm.executeOp0xD,
-		0xe: vm.executeOp0xE, 0xf: vm.executeOp0xF,
-	}
-
 	return vm
 }
 
 // RunCycle runs a single CPU cycle of the virtual machine.
 func (vm *VirtualMachine) RunCycle() error {
-	// Fetch-decode-execute
 	vm.fetch()
-	execute := vm.decode()
-	err := execute()
-
-	// Keep program counter within range
-	if vm.PC > 0xfff {
-		vm.PC = (vm.PC & 0xfff) + ProgramStartAddress
-	}
-
-	return err
+	return vm.execute()
 }
 
 // UpdateTimers updates the delay and sound timers.
@@ -134,7 +114,6 @@ func (vm *VirtualMachine) UpdateTimers() {
 // memory.
 func (vm *VirtualMachine) LoadROM(path string) error {
 	data, err := ioutil.ReadFile(path)
-
 	if err != nil {
 		return err
 	} else if len(data) > ProgramMemorySize {
@@ -143,15 +122,14 @@ func (vm *VirtualMachine) LoadROM(path string) error {
 
 	i := ProgramStartAddress
 	for _, b := range data {
-		vm.Memory[i] = uint(b)
+		vm.Memory[i] = uint8(b)
 		i++
 	}
-
 	return nil
 }
 
 // LoadOpcodes loads opcodes into the virtual machine's program memory.
-func (vm *VirtualMachine) LoadOpcodes(opcodes []uint) error {
+func (vm *VirtualMachine) LoadOpcodes(opcodes []uint16) error {
 	if 2*len(opcodes) >= ProgramMemorySize {
 		return InvalidProgramError("The ROM is too large")
 	}
@@ -159,11 +137,11 @@ func (vm *VirtualMachine) LoadOpcodes(opcodes []uint) error {
 	i := ProgramStartAddress
 	for _, opcode := range opcodes {
 		if opcode > 0xffff {
-			return InvalidOpcodeError(vm.Opcode)
+			return InvalidOpcodeError(opcode)
 		}
 
-		vm.Memory[i] = opcode >> 8
-		vm.Memory[i+1] = opcode & 0xff
+		vm.Memory[i] = uint8(opcode >> 8)
+		vm.Memory[i+1] = uint8(opcode & 0xff)
 		i += 0x2
 	}
 
@@ -197,6 +175,10 @@ func (vm *VirtualMachine) ClearProgram() {
 	for i := ProgramStartAddress; i < len(vm.Memory); i++ {
 		vm.Memory[i] = 0x00
 	}
+
+	for i, b := range fonts {
+		vm.Memory[i] = b
+	}
 }
 
 // ClearRegisters clears all the registers, including the program
@@ -227,37 +209,71 @@ func (vm *VirtualMachine) ClearDisplay() {
 //=====================================================================
 
 func (vm *VirtualMachine) fetch() {
-	opcode := (vm.Memory[vm.PC] << 8) | vm.Memory[vm.PC+1]
+	opcode := (uint16(vm.Memory[vm.PC]) << 8) | uint16(vm.Memory[vm.PC+1])
 	vm.PC += 0x2
 	vm.Opcode = opcode
 }
 
-func (vm *VirtualMachine) decode() func() error {
-	return vm.opcodeFn[vm.decodeOp()]
+func (vm *VirtualMachine) decodeX() uint8 {
+	return uint8((vm.Opcode >> 8) & 0xf)
 }
 
-func (vm *VirtualMachine) decodeX() uint {
-	return (vm.Opcode >> 8) & 0xf
+func (vm *VirtualMachine) decodeY() uint8 {
+	return uint8((vm.Opcode >> 4) & 0xf)
 }
 
-func (vm *VirtualMachine) decodeY() uint {
-	return (vm.Opcode >> 4) & 0xf
+func (vm *VirtualMachine) decodeN() uint8 {
+	return uint8(vm.Opcode & 0xf)
 }
 
-func (vm *VirtualMachine) decodeN() uint {
-	return vm.Opcode & 0xf
+func (vm *VirtualMachine) decodeOp() uint8 {
+	return uint8(vm.Opcode >> 12)
 }
 
-func (vm *VirtualMachine) decodeOp() uint {
-	return vm.Opcode >> 0xc
+func (vm *VirtualMachine) decodeKK() uint8 {
+	return uint8(vm.Opcode & 0xff)
 }
 
-func (vm *VirtualMachine) decodeKK() uint {
-	return vm.Opcode & 0xff
-}
-
-func (vm *VirtualMachine) decodeNNN() uint {
+func (vm *VirtualMachine) decodeNNN() uint16 {
 	return vm.Opcode & 0xfff
+}
+
+func (vm *VirtualMachine) execute() error {
+	switch vm.decodeOp() {
+	case 0x0:
+		return vm.executeOp0x0()
+	case 0x1:
+		return vm.executeOp0x1()
+	case 0x2:
+		return vm.executeOp0x2()
+	case 0x3:
+		return vm.executeOp0x3()
+	case 0x4:
+		return vm.executeOp0x4()
+	case 0x5:
+		return vm.executeOp0x5()
+	case 0x6:
+		return vm.executeOp0x6()
+	case 0x7:
+		return vm.executeOp0x7()
+	case 0x8:
+		return vm.executeOp0x8()
+	case 0x9:
+		return vm.executeOp0x9()
+	case 0xa:
+		return vm.executeOp0xA()
+	case 0xb:
+		return vm.executeOp0xB()
+	case 0xc:
+		return vm.executeOp0xC()
+	case 0xd:
+		return vm.executeOp0xD()
+	case 0xe:
+		return vm.executeOp0xE()
+	case 0xf:
+		return vm.executeOp0xF()
+	}
+	return nil
 }
 
 func (vm *VirtualMachine) executeOp0x0() error {
@@ -406,7 +422,7 @@ func (vm *VirtualMachine) executeOp0xA() error {
 }
 
 func (vm *VirtualMachine) executeOp0xB() error {
-	addr := (vm.decodeNNN() + vm.V[0x0]) & 0xfff
+	addr := (vm.decodeNNN() + uint16(vm.V[0x0])) & 0xfff
 	if addr < ProgramStartAddress {
 		return InvalidJumpError(vm.PC, addr)
 	}
@@ -416,7 +432,7 @@ func (vm *VirtualMachine) executeOp0xB() error {
 }
 
 func (vm *VirtualMachine) executeOp0xC() error {
-	vm.V[vm.decodeX()] = uint(rand.Int()&0xff) & vm.decodeKK()
+	vm.V[vm.decodeX()] = uint8(rand.Uint32()) & vm.decodeKK()
 	return nil
 }
 
@@ -426,12 +442,12 @@ func (vm *VirtualMachine) executeOp0xD() error {
 	vx := vm.V[vm.decodeX()]
 	vy := vm.V[vm.decodeY()]
 
-	for n := uint(0); n < vm.decodeN(); n++ {
+	for n := uint8(0); n < vm.decodeN(); n++ {
 		y := (vy + n) % DisplayHeight
-		sprite := vm.Memory[(vm.I+n)%MemorySize]
+		sprite := vm.Memory[(vm.I+uint16(n))%MemorySize]
 
-		for i := 7; sprite > 0x00; i-- {
-			x := (vx + uint(i)) % DisplayWidth
+		for i := uint8(7); sprite > 0x00; i-- {
+			x := (vx + i) % DisplayWidth
 
 			bit := sprite&0x1 == 0x1
 			if bit && vm.Display[y][x] {
@@ -474,7 +490,7 @@ func (vm *VirtualMachine) executeOp0xF() error {
 	case 0x0a:
 		for i, k := range vm.Keys {
 			if k {
-				vm.V[x] = uint(i)
+				vm.V[x] = uint8(i)
 				return nil
 			}
 		}
@@ -484,20 +500,20 @@ func (vm *VirtualMachine) executeOp0xF() error {
 	case 0x18:
 		vm.ST = vm.V[x]
 	case 0x1E:
-		vm.I = (vm.I + vm.V[x]) & 0xfff
+		vm.I = (vm.I + uint16(vm.V[x])) & 0xfff
 	case 0x29:
-		vm.I = vm.V[x] * FontSize
+		vm.I = uint16(vm.V[x]) * FontSize
 	case 0x33:
 		vm.Memory[vm.I] = vm.V[x] / 100
 		vm.Memory[vm.I+1] = (vm.V[x] % 100) / 10
 		vm.Memory[vm.I+2] = vm.V[x] % 10
 	case 0x55:
-		for i := uint(0); i <= x; i++ {
+		for i := uint16(0); i <= uint16(x); i++ {
 			vm.Memory[vm.I+i] = vm.V[i]
 		}
 	case 0x65:
-		for i := uint(0); i <= x; i++ {
-			vm.V[i] = vm.Memory[vm.I+i]
+		for i := uint8(0); i <= x; i++ {
+			vm.V[i] = vm.Memory[vm.I+uint16(i)]
 		}
 	}
 
