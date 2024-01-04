@@ -2,8 +2,8 @@ package ch8
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
+	"os"
 )
 
 //===========================================================================
@@ -113,7 +113,7 @@ func (vm *VirtualMachine) UpdateTimers() {
 // LoadROM reads a CHIP-8 ROM program file (*.ch8) and loads it into
 // memory.
 func (vm *VirtualMachine) LoadROM(path string) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	} else if len(data) > ProgramMemorySize {
