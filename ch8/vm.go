@@ -1,35 +1,8 @@
 package ch8
 
 import (
-	"fmt"
 	"math/rand"
-	"os"
 )
-
-//===========================================================================
-// Errors
-//===========================================================================
-
-// InvalidProgramError is an error that occurs from loading a program.
-func InvalidProgramError(msg string) error {
-	return fmt.Errorf("invalid program: %s", msg)
-}
-
-// InvalidStateError is an error that occurs due to bad state in the
-// virtual machine.
-func InvalidStateError(msg string) error {
-	return fmt.Errorf("invalid state: %s", msg)
-}
-
-// InvalidJumpError is an error caused by a program trying to jump to
-// an invalid memory location.
-func InvalidJumpError(fromAddr, toAddr uint16) error {
-	return fmt.Errorf("invalid jump: Jump from %.3X to %.3X", fromAddr, toAddr)
-}
-
-//===========================================================================
-// Virtual Machine
-//===========================================================================
 
 var (
 	fonts = []uint8{
@@ -100,41 +73,20 @@ func (vm *VirtualMachine) UpdateTimers() {
 	}
 }
 
-// LoadROM reads a CHIP-8 ROM program file (*.ch8) and loads it into
-// memory.
-func (vm *VirtualMachine) LoadROM(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	} else if len(data) > ProgramMemorySize {
-		return InvalidProgramError("The ROM is too large")
+// LoadBytes reads bytes into the virtual machine's memory.
+//
+// Note that the bytes will loaded into memory starting at address 0x200, the
+// start address of the virtual machine's program memory.
+func (emu *Emulator) LoadBytes(bytes []byte) error {
+	if len(bytes) > ProgramMemorySize {
+		return InvalidProgramError("Too many bytes are being loaded into memory")
 	}
 
-	i := ProgramStartAddress
-	for _, b := range data {
-		vm.Memory[i] = uint8(b)
-		i++
+	addr := ProgramStartAddress
+	for _, b := range bytes {
+		emu.vm.Memory[addr] = uint8(b)
+		addr++
 	}
-	return nil
-}
-
-// LoadOpcodes loads opcodes into the virtual machine's program memory.
-func (vm *VirtualMachine) LoadOpcodes(opcodes []uint16) error {
-	if 2*len(opcodes) >= ProgramMemorySize {
-		return InvalidProgramError("The ROM is too large")
-	}
-
-	i := ProgramStartAddress
-	for _, opcode := range opcodes {
-		if opcode > 0xffff {
-			return InvalidProgramError(fmt.Sprintf("invalid opcode: %X", opcode))
-		}
-
-		vm.Memory[i] = uint8(opcode >> 8)
-		vm.Memory[i+1] = uint8(opcode & 0xff)
-		i += 0x2
-	}
-
 	return nil
 }
 
@@ -492,43 +444,4 @@ func (vm *VirtualMachine) executeOp0xF() error {
 	}
 
 	return nil
-}
-
-//=====================================================================
-// Debugging
-//=====================================================================
-
-// PrintState prints the state of the virtual machine.
-//
-// This function exists primarily for debugging purposes.
-func (vm *VirtualMachine) PrintState() {
-	fmt.Println("----------------")
-
-	// Display special registers
-	fmt.Printf("I:         0x%.3X\n", vm.I)
-	fmt.Printf("SP:        0x%.1X\n", vm.SP)
-	fmt.Printf("PC:        0x%.3X\n", vm.PC)
-	fmt.Printf("Delay:     0x%.2X\n", vm.DT)
-	fmt.Printf("Sound:     0x%.2X\n", vm.ST)
-
-	// Display call stack
-	if vm.SP > 0x0 {
-		fmt.Printf("\nStack:\n")
-
-		for i := int(vm.SP) - 1; i >= 0; i-- {
-			fmt.Printf("  0x%.1X: |0x%.3X|\n", i, vm.Stack[i])
-		}
-	}
-
-	// Display general-purpose registers
-	fmt.Printf("\nRegisters:")
-	for i := 0; i < 4; i++ {
-		fmt.Printf("\n  ")
-
-		for j := 0; j < 4; j++ {
-			fmt.Printf("|0x%.1X: 0x%.2X|", j*4+i, vm.V[j*4+i])
-		}
-	}
-
-	fmt.Println("\n----------------")
 }

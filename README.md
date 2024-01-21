@@ -6,7 +6,7 @@ A CHIP-8 emulator written in Go.
 
 ## Description
 
-CHIP-8 is an interpreted programming language designed in the late 1970s for writing games. It was designed to run on 8-bit systems such as the [COSMAC VIP](https://en.wikipedia.org/wiki/COSMAC_VIP). The CHIP-8 interpreter and programs are meant to run on a virtual machine, which consists of the following components:
+CHIP8 is an interpreted programming language designed in the 1970s for writing games. The CHIP-8 programs are run on a virtual machine, which consists of the following components:
 
 - 4 kilobytes of memory
 - 16 8-bit general-purpose registers
@@ -20,49 +20,34 @@ For more information on CHIP-8 and how to write programs on it, see the followin
 
 ## Setup
 
-This project requires [Ebiten](https://ebiten.org) for rendering the emulator. Make sure to install all the [system dependencies](https://ebiten.org/documents/install.html) necessary to run Ebiten.
+This project requires Go 1.18+ and [Ebiten](https://ebiten.org). Make sure to install all the [system dependencies](https://ebitengine.org/en/documents/install.html) necessary to run Ebiten.
 
-This project uses `Make`. To build the emulator, run the following:
+To build the emulator, run the following:
 
 ```log
 make build
 ```
 
-This will create the executable file `ch8` in the `bin` directory of this project.
-
-You can also install the emulator on your system using the following command:
-
-```log
-make install
-```
-
-This will build the emulator and place the built executable within `/usr/local/bin`. You may need to run this command using `sudo` access.
-
-You can always uninstall the emulator by running the following:
-
-```log
-make uninstall
-```
+This will create the executable file `chip8` in the root directory of the project.
 
 ## Usage
 
-A CLI is used to operate the emulator:
+The executable takes in the path to a CHIP-8 ROM file.
 
-```log
-A CHIP-8 emulator written in Go.
+```shell
+$ ./chip8 <path to ROM>
+```
 
-Usage:
-  chip8 [flags]
+For example,
 
-Examples:
-$ chip8 roms/Logo.ch8
+```shell
+$ ./chip8 roms/Logo.ch8
+```
 
-Flags:
-  -h, --help                help for chip8
-      --hertz-io duration   set the speed of the IO timers. (default 16ms)
-      --hertz-vm duration   set the speed of the virtual machine's CPU cycle. (default 2ms)
-  -s, --scale int           set the scale factor of the screen (default 10)
-  -t, --tps int             set the max ticks-per-second (TPS) of the renderer (default 60)
+The executable also takes in a `-scale` flag for changing the window size of the emulator.
+
+```shell
+$ ./chip8 -scale=10 roms/Logo.ch8   // Scales the window size by a factor of 10
 ```
 
 ### Key Mapping

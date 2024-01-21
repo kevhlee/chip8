@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"os"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -13,14 +14,6 @@ import (
 // EmulatorOptions is a set of arguments that allows you to set
 // different options in the emulator.
 type EmulatorOptions struct {
-	// HertzIO is the speed (in hertz) in which to update the IO timers
-	// and audio.
-	HertzIO time.Duration
-
-	// HertzVM is the speed in which to run a CPU cycle of the CHIP-8
-	// virtual machine.
-	HertzVM time.Duration
-
 	// Scale is the scale factor of the CHIP-8 screen.
 	Scale int
 }
@@ -33,8 +26,6 @@ const (
 )
 
 var (
-	ErrTerminated = errors.New("Emulator terminated")
-
 	foreground = color.White
 	background = color.Black
 
@@ -55,7 +46,7 @@ var (
 
 // Emulator is the CHIP-8 emulator.
 type Emulator struct {
-	options   *EmulatorOptions
+	scale     int
 	vm        *VirtualMachine
 	vmChannel chan EmulatorEvent
 }
@@ -65,31 +56,23 @@ type Emulator struct {
 type EmulatorEvent string
 
 // NewEmulator creates a new CHIP-8 emulator instance.
-func NewEmulator(options *EmulatorOptions) (*Emulator, error) {
-	if err := checkOptions(options); err != nil {
-		return nil, err
+func NewEmulator(opts EmulatorOptions) (*Emulator, error) {
+	if opts.Scale < 1 {
+		return nil, errors.New("scale factor must be positive")
 	}
 
 	return &Emulator{
-		options:   options,
+		scale:     opts.Scale,
 		vm:        NewVirtualMachine(),
 		vmChannel: make(chan EmulatorEvent),
 	}, nil
 }
 
-func NewEmulatorOptions() *EmulatorOptions {
-	return &EmulatorOptions{
-		HertzIO: DefaultHertzIO,
-		HertzVM: DefaultHertzVM,
-		Scale:   DefaultScale,
-	}
-}
-
 // Start starts the emulator.
 func (emu *Emulator) Start() (err error) {
-	ebiten.SetWindowSize(DisplayWidth*emu.options.Scale, DisplayHeight*emu.options.Scale)
+	ebiten.SetWindowSize(DisplayWidth*emu.scale, DisplayHeight*emu.scale)
 	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetTPS(60)
+	ebiten.SetTPS(DefaultMaxTPS)
 	ebiten.SetVsyncEnabled(true)
 
 	go emu.startIO()
@@ -98,9 +81,14 @@ func (emu *Emulator) Start() (err error) {
 	return ebiten.RunGame(emu)
 }
 
-// LoadROM loads a CHIP-8 ROM into the virtual machine.
-func (emu *Emulator) LoadROM(path string) error {
-	return emu.vm.LoadROM(path)
+// LoadROM reads a CHIP-8 ROM program file (*.ch8) and loads it into
+// the virtual machine's memory.
+func (emu *Emulator) LoadROM(filename string) error {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	return emu.LoadBytes(data)
 }
 
 // Update updates the state of the emulator.
@@ -142,17 +130,10 @@ func (emu *Emulator) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return DisplayWidth, DisplayHeight
 }
 
-func checkOptions(options *EmulatorOptions) error {
-	if options.Scale < 1 {
-		return errors.New("scale factor must be positive")
-	}
-	return nil
-}
-
 func (emu *Emulator) startVM() {
 	pause := false
 
-	for range time.Tick(emu.options.HertzVM) {
+	for range time.Tick(DefaultHertzVM) {
 		select {
 		case event := <-emu.vmChannel:
 			switch event {
@@ -176,7 +157,7 @@ func (emu *Emulator) startVM() {
 }
 
 func (emu *Emulator) startIO() {
-	for range time.Tick(emu.options.HertzIO) {
+	for range time.Tick(DefaultHertzIO) {
 		emu.vm.UpdateTimers()
 	}
 }

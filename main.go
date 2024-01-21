@@ -1,75 +1,41 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/kevhlee/chip8/ch8"
-	"github.com/spf13/cobra"
 )
 
 func main() {
-	options := ch8.NewEmulatorOptions()
+	opts := ch8.EmulatorOptions{}
 
-	command := &cobra.Command{
-		Use:           "chip8",
-		Example:       "$ chip8 roms/Logo.ch8",
-		Long:          "A CHIP-8 emulator written in Go.",
-		SilenceErrors: true,
-		SilenceUsage:  true,
-		Args: func(cli *cobra.Command, args []string) error {
-			if len(args) < 1 {
-				return fmt.Errorf("input a path to a CHIP-8 ROM file")
-			} else if _, err := os.Stat(args[0]); os.IsNotExist(err) {
-				return err
-			}
+	flag.IntVar(&opts.Scale, "scale", ch8.DefaultScale, "set the scale factor of the screen")
+	flag.Parse()
 
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			emu, err := ch8.NewEmulator(options)
-			if err != nil {
-				return err
-			}
-
-			if err := emu.LoadROM(args[0]); err != nil {
-				return err
-			}
-
-			return emu.Start()
-		},
+	romPath := flag.Arg(0)
+	if len(romPath) == 0 {
+		exitWithError("Usage: chip8 <path to ROM>")
 	}
 
-	initFlags(command, options)
+	emu, err := ch8.NewEmulator(opts)
+	if err != nil {
+		exitWithError(err.Error())
+	}
 
-	if err := command.Execute(); err != nil {
+	if err := emu.LoadROM(romPath); err != nil {
+		exitWithError(err.Error())
+	}
+
+	if err := emu.Start(); err != nil {
 		if err != ch8.ErrTerminated {
-			fmt.Println(err)
-			os.Exit(1)
+			exitWithError(err.Error())
 		}
 	}
 }
 
-func initFlags(command *cobra.Command, options *ch8.EmulatorOptions) {
-	command.Flags().DurationVar(
-		&options.HertzIO,
-		"hertz-io",
-		ch8.DefaultHertzIO,
-		"set the speed of the IO timers.",
-	)
-
-	command.Flags().DurationVar(
-		&options.HertzVM,
-		"hertz-vm",
-		ch8.DefaultHertzVM,
-		"set the speed of the virtual machine's CPU cycle.",
-	)
-
-	command.Flags().IntVarP(
-		&options.Scale,
-		"scale",
-		"s",
-		ch8.DefaultScale,
-		"set the scale factor of the screen",
-	)
+func exitWithError(msg string) {
+	fmt.Fprintln(os.Stderr, msg)
+	os.Exit(1)
 }
