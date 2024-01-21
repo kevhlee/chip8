@@ -2,8 +2,8 @@ package ch8
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
+	"os"
 )
 
 //===========================================================================
@@ -24,17 +24,7 @@ func InvalidStateError(msg string) error {
 // InvalidJumpError is an error caused by a program trying to jump to
 // an invalid memory location.
 func InvalidJumpError(fromAddr, toAddr uint16) error {
-	return fmt.Errorf(
-		"invalid jump: Jump from %.3X to %.3X",
-		fromAddr,
-		toAddr,
-	)
-}
-
-// InvalidOpcodeError is an error caused by the CHIP-8 virtual machine
-// trying to run an invalid opcode.
-func InvalidOpcodeError(opcode uint16) error {
-	return fmt.Errorf("invalid opcode: %.4X", opcode)
+	return fmt.Errorf("invalid jump: Jump from %.3X to %.3X", fromAddr, toAddr)
 }
 
 //===========================================================================
@@ -113,7 +103,7 @@ func (vm *VirtualMachine) UpdateTimers() {
 // LoadROM reads a CHIP-8 ROM program file (*.ch8) and loads it into
 // memory.
 func (vm *VirtualMachine) LoadROM(path string) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	} else if len(data) > ProgramMemorySize {
@@ -137,7 +127,7 @@ func (vm *VirtualMachine) LoadOpcodes(opcodes []uint16) error {
 	i := ProgramStartAddress
 	for _, opcode := range opcodes {
 		if opcode > 0xffff {
-			return InvalidOpcodeError(opcode)
+			return InvalidProgramError(fmt.Sprintf("invalid opcode: %X", opcode))
 		}
 
 		vm.Memory[i] = uint8(opcode >> 8)
@@ -283,8 +273,6 @@ func (vm *VirtualMachine) executeOp0x0() error {
 	case 0x0ee:
 		vm.SP--
 		vm.PC = vm.Stack[vm.SP]
-	default:
-		return InvalidOpcodeError(vm.Opcode)
 	}
 	return nil
 }
@@ -332,14 +320,9 @@ func (vm *VirtualMachine) executeOp0x4() error {
 }
 
 func (vm *VirtualMachine) executeOp0x5() error {
-	if vm.decodeN() != 0x0 {
-		return InvalidOpcodeError(vm.Opcode)
-	}
-
-	if vm.V[vm.decodeX()] == vm.V[vm.decodeY()] {
+	if vm.decodeN() == 0x0 && vm.V[vm.decodeX()] == vm.V[vm.decodeY()] {
 		vm.PC += 2
 	}
-
 	return nil
 }
 
@@ -397,22 +380,15 @@ func (vm *VirtualMachine) executeOp0x8() error {
 	case 0xe:
 		vm.V[0xf] = vm.V[x] >> 7
 		vm.V[x] = (vm.V[x] << 1) & 0xff
-	default:
-		return InvalidOpcodeError(vm.Opcode)
 	}
 
 	return nil
 }
 
 func (vm *VirtualMachine) executeOp0x9() error {
-	if vm.decodeN() != 0x0 {
-		return InvalidOpcodeError(vm.Opcode)
-	}
-
-	if vm.V[vm.decodeX()] != vm.V[vm.decodeY()] {
+	if vm.decodeN() == 0x0 && vm.V[vm.decodeX()] != vm.V[vm.decodeY()] {
 		vm.PC += 2
 	}
-
 	return nil
 }
 
@@ -474,8 +450,6 @@ func (vm *VirtualMachine) executeOp0xE() error {
 		if !vm.Keys[vx] {
 			vm.PC += 0x2
 		}
-	default:
-		return InvalidOpcodeError(vm.Opcode)
 	}
 
 	return nil
