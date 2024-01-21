@@ -89,7 +89,7 @@ func NewEmulatorOptions() *EmulatorOptions {
 func (emu *Emulator) Start() (err error) {
 	ebiten.SetWindowSize(DisplayWidth*emu.options.Scale, DisplayHeight*emu.options.Scale)
 	ebiten.SetWindowTitle("CHIP-8")
-	ebiten.SetTPS(60)
+	ebiten.SetMaxTPS(60)
 	ebiten.SetVsyncEnabled(true)
 
 	go emu.startIO()
@@ -134,7 +134,9 @@ func (emu *Emulator) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	ebiten.SetWindowTitle(fmt.Sprintf("CHIP-8 | FPS: %.2f", ebiten.ActualFPS()))
+	ebiten.SetWindowTitle(
+		fmt.Sprintf("CHIP-8 | FPS: %.2f", ebiten.CurrentFPS()),
+	)
 }
 
 // Layout returns the resolution of the emulator's screen.
