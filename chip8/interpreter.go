@@ -52,6 +52,8 @@ func (c *Interpreter) LoadROM(filename string) error {
 }
 
 func (c *Interpreter) Run() error {
+	log.Info("Initializing CHIP-8")
+
 	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_AUDIO); err != nil {
 		return err
 	}
@@ -81,6 +83,8 @@ func (c *Interpreter) Run() error {
 		W: int32(c.opts.Scale),
 		H: int32(c.opts.Scale),
 	}
+
+	log.Info("Starting CHIP-8")
 
 	var (
 		paused  = false
