@@ -1,4 +1,4 @@
-SOURCES := main.go $(wildcard src/*.go)
+SOURCES := main.go $(wildcard chip8/*.go)
 
 bin/chip8: $(SOURCES)
 	@ mkdir -p bin
