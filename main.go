@@ -15,6 +15,11 @@ func main() {
 	flag.IntVar(&opts.TPS, "tps", 12, "set the number of CPU ticks per frame")
 	flag.Parse()
 
+	filename := flag.Arg(0)
+	if len(filename) == 0 {
+		exit("Usage: chip8 <path to ROM>")
+	}
+
 	interpreter := chip8.NewInterpreter(opts)
 	if err := interpreter.LoadROM(flag.Arg(0)); err != nil {
 		exit(err.Error())
