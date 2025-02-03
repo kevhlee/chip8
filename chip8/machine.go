@@ -23,8 +23,8 @@ const (
 	StackSize = 0x10
 )
 
-// Machine is the CHIP-8 virtual machine.
-type Machine struct {
+// VirtualMachine is the CHIP-8 virtual machine.
+type VirtualMachine struct {
 	Keyboard
 	Screen
 
@@ -39,9 +39,9 @@ type Machine struct {
 	executeOpMap [0x10]func(uint16) error
 }
 
-// NewMachine creates a CHIP-8 new virtual machine.
-func NewMachine(keyboard Keyboard, screen Screen) *Machine {
-	m := &Machine{
+// NewVirtualMachine creates a CHIP-8 new virtual machine.
+func NewVirtualMachine(keyboard Keyboard, screen Screen) *VirtualMachine {
+	m := &VirtualMachine{
 		pc:        ProgramStartAddress,
 		registers: [NumRegisters]uint8{},
 		stack:     [StackSize]uint16{},
@@ -78,56 +78,56 @@ func NewMachine(keyboard Keyboard, screen Screen) *Machine {
 	return m
 }
 
-// LoadProgram loads a program into memory.
-func (m *Machine) LoadProgram(bytes ...byte) error {
+// LoadProgram loads bytes into memory.
+func (vm *VirtualMachine) LoadProgram(bytes ...byte) error {
 	if len(bytes) >= (MemorySize - ProgramStartAddress) {
 		return fmt.Errorf("Program has too many bytes")
 	}
 
 	for i, b := range bytes {
-		m.memory[ProgramStartAddress+i] = b
+		vm.memory[ProgramStartAddress+i] = b
 	}
 	return nil
 }
 
 // Reset resets the virtual machine without erasing the current program.
-func (m *Machine) Reset() {
-	m.i = 0
-	m.pc = ProgramStartAddress
-	m.sp = 0
-	m.delay = 0
-	m.sound = 0
+func (vm *VirtualMachine) Reset() {
+	vm.i = 0
+	vm.pc = ProgramStartAddress
+	vm.sp = 0
+	vm.delay = 0
+	vm.sound = 0
 
-	for i := 0; i < len(m.registers); i++ {
-		m.registers[i] = 0
+	for i := 0; i < len(vm.registers); i++ {
+		vm.registers[i] = 0
 	}
 
-	for i := 0; i < len(m.stack); i++ {
-		m.registers[i] = 0
+	for i := 0; i < len(vm.stack); i++ {
+		vm.registers[i] = 0
 	}
 
-	m.Screen.ClearScreen()
+	vm.Screen.ClearScreen()
 }
 
 // RunCycle executes a single CPU cycle.
-func (m *Machine) RunCycle() error {
-	opcode := m.fetchOp()
-	return m.executeOpMap[opcode>>12](opcode)
+func (vm *VirtualMachine) RunCycle() error {
+	opcode := vm.fetchOp()
+	return vm.executeOpMap[opcode>>12](opcode)
 }
 
 // UpdateTimers updates the virtual machine's timers.
-func (m *Machine) UpdateTimers() {
-	if m.delay > 0 {
-		m.delay--
+func (vm *VirtualMachine) UpdateTimers() {
+	if vm.delay > 0 {
+		vm.delay--
 	}
-	if m.sound > 0 {
-		m.sound--
+	if vm.sound > 0 {
+		vm.sound--
 	}
 }
 
-func (m *Machine) fetchOp() uint16 {
-	opcode := (uint16(m.memory[m.pc]) << 8) | uint16(m.memory[m.pc+1])
-	m.pc += 2
+func (vm *VirtualMachine) fetchOp() uint16 {
+	opcode := (uint16(vm.memory[vm.pc]) << 8) | uint16(vm.memory[vm.pc+1])
+	vm.pc += 2
 	return opcode
 }
 
@@ -151,248 +151,248 @@ func decodeNibb(opcode uint16) uint8 {
 	return uint8(opcode & 0xF)
 }
 
-func (m *Machine) executeOp0(opcode uint16) error {
+func (vm *VirtualMachine) executeOp0(opcode uint16) error {
 	switch opcode {
 	// 00E0 - CLS
 	case 0x00E0:
-		m.Screen.ClearScreen()
+		vm.Screen.ClearScreen()
 
 	// 00EE - RET
 	case 0x00EE:
-		if m.sp < 1 {
+		if vm.sp < 1 {
 			return fmt.Errorf("Empty call stack")
 		}
 
-		m.sp--
-		m.pc = m.stack[m.sp]
+		vm.sp--
+		vm.pc = vm.stack[vm.sp]
 	}
 
 	return nil
 }
 
-func (m *Machine) executeOp1(opcode uint16) error {
+func (vm *VirtualMachine) executeOp1(opcode uint16) error {
 	// 1nnn - JP addr
-	m.pc = decodeAddr(opcode)
+	vm.pc = decodeAddr(opcode)
 	return nil
 }
 
-func (m *Machine) executeOp2(opcode uint16) error {
+func (vm *VirtualMachine) executeOp2(opcode uint16) error {
 	// 2nnn - CALL addr
-	if m.sp > 0xF {
+	if vm.sp > 0xF {
 		return fmt.Errorf("Call stack overflow")
 	}
 
-	m.stack[m.sp] = m.pc
-	m.sp++
-	m.pc = decodeAddr(opcode)
+	vm.stack[vm.sp] = vm.pc
+	vm.sp++
+	vm.pc = decodeAddr(opcode)
 	return nil
 }
 
-func (m *Machine) executeOp3(opcode uint16) error {
+func (vm *VirtualMachine) executeOp3(opcode uint16) error {
 	// 3xkk - SE Vx, byte
-	if m.registers[decodeX(opcode)] == decodeByte(opcode) {
-		m.pc += 2
+	if vm.registers[decodeX(opcode)] == decodeByte(opcode) {
+		vm.pc += 2
 	}
 	return nil
 }
 
-func (m *Machine) executeOp4(opcode uint16) error {
+func (vm *VirtualMachine) executeOp4(opcode uint16) error {
 	// 4xkk - SNE Vx, byte
-	if m.registers[decodeX(opcode)] != decodeByte(opcode) {
-		m.pc += 2
+	if vm.registers[decodeX(opcode)] != decodeByte(opcode) {
+		vm.pc += 2
 	}
 	return nil
 }
 
-func (m *Machine) executeOp5(opcode uint16) error {
+func (vm *VirtualMachine) executeOp5(opcode uint16) error {
 	// 5xy0 - SE Vx, Vy
-	if decodeNibb(opcode) == 0 && m.registers[decodeX(opcode)] == m.registers[decodeY(opcode)] {
-		m.pc += 2
+	if decodeNibb(opcode) == 0 && vm.registers[decodeX(opcode)] == vm.registers[decodeY(opcode)] {
+		vm.pc += 2
 	}
 	return nil
 }
 
-func (m *Machine) executeOp6(opcode uint16) error {
+func (vm *VirtualMachine) executeOp6(opcode uint16) error {
 	// 6xkk - LD Vx, byte
-	m.registers[decodeX(opcode)] = decodeByte(opcode)
+	vm.registers[decodeX(opcode)] = decodeByte(opcode)
 	return nil
 }
 
-func (m *Machine) executeOp7(opcode uint16) error {
+func (vm *VirtualMachine) executeOp7(opcode uint16) error {
 	// 7xkk - ADD Vx, byte
-	m.registers[decodeX(opcode)] += decodeByte(opcode)
+	vm.registers[decodeX(opcode)] += decodeByte(opcode)
 	return nil
 }
 
-func (m *Machine) executeOp8(opcode uint16) error {
+func (vm *VirtualMachine) executeOp8(opcode uint16) error {
 	x, y := decodeX(opcode), decodeY(opcode)
 
 	switch decodeNibb(opcode) {
 	// 8xy0 - LD Vx, Vy
 	case 0x0:
-		m.registers[x] = m.registers[y]
+		vm.registers[x] = vm.registers[y]
 
 	// 8xy1 - OR Vx, Vy
 	case 0x1:
-		m.registers[x] |= m.registers[y]
+		vm.registers[x] |= vm.registers[y]
 
 	// 8xy2 - AND Vx, Vy
 	case 0x2:
-		m.registers[x] &= m.registers[y]
+		vm.registers[x] &= vm.registers[y]
 
 	// 8xy3 - XOR Vx, Vy
 	case 0x3:
-		m.registers[x] ^= m.registers[y]
+		vm.registers[x] ^= vm.registers[y]
 
 	// 8xy4 - ADD Vx, Vy
 	case 0x4:
-		if m.registers[x] > 0xFF-m.registers[y] {
-			m.registers[0xF] = 1
+		if vm.registers[x] > 0xFF-vm.registers[y] {
+			vm.registers[0xF] = 1
 		} else {
-			m.registers[0xF] = 0
+			vm.registers[0xF] = 0
 		}
-		m.registers[x] += m.registers[y]
+		vm.registers[x] += vm.registers[y]
 
 	// 8xy5 - SUB Vx, Vy
 	case 0x5:
-		if m.registers[x] > m.registers[y] {
-			m.registers[0xF] = 1
+		if vm.registers[x] > vm.registers[y] {
+			vm.registers[0xF] = 1
 		} else {
-			m.registers[0xF] = 0
+			vm.registers[0xF] = 0
 		}
-		m.registers[x] -= m.registers[y]
+		vm.registers[x] -= vm.registers[y]
 
 	// 8xy6 - SHR Vx, {Vy}
 	case 0x6:
-		m.registers[0xF] = m.registers[x] & 1
-		m.registers[x] >>= 1
+		vm.registers[0xF] = vm.registers[x] & 1
+		vm.registers[x] >>= 1
 
 	// 8xy7 - SUBN Vx, Vy
 	case 0x7:
-		if m.registers[y] > m.registers[x] {
-			m.registers[0xF] = 1
+		if vm.registers[y] > vm.registers[x] {
+			vm.registers[0xF] = 1
 		} else {
-			m.registers[0xF] = 0
+			vm.registers[0xF] = 0
 		}
-		m.registers[x] = m.registers[y] - m.registers[x]
+		vm.registers[x] = vm.registers[y] - vm.registers[x]
 
 	// 8xyE - SHL Vx, {Vy}
 	case 0xE:
-		m.registers[0xF] = m.registers[x] >> 7
-		m.registers[x] <<= 1
+		vm.registers[0xF] = vm.registers[x] >> 7
+		vm.registers[x] <<= 1
 	}
 
 	return nil
 }
 
-func (m *Machine) executeOp9(opcode uint16) error {
+func (vm *VirtualMachine) executeOp9(opcode uint16) error {
 	// 9xy0 - SNE Vx, Vy
-	if decodeNibb(opcode) == 0 && m.registers[decodeX(opcode)] != m.registers[decodeY(opcode)] {
-		m.pc += 2
+	if decodeNibb(opcode) == 0 && vm.registers[decodeX(opcode)] != vm.registers[decodeY(opcode)] {
+		vm.pc += 2
 	}
 	return nil
 }
 
-func (m *Machine) executeOpA(opcode uint16) error {
+func (vm *VirtualMachine) executeOpA(opcode uint16) error {
 	// Annn - LD I, addr
-	m.i = decodeAddr(opcode)
+	vm.i = decodeAddr(opcode)
 	return nil
 }
 
-func (m *Machine) executeOpB(opcode uint16) error {
+func (vm *VirtualMachine) executeOpB(opcode uint16) error {
 	// Bnnn - JP addr, V0
-	m.pc = decodeAddr(opcode) + uint16(m.registers[0])
+	vm.pc = decodeAddr(opcode) + uint16(vm.registers[0])
 	return nil
 }
 
-func (m *Machine) executeOpC(opcode uint16) error {
+func (vm *VirtualMachine) executeOpC(opcode uint16) error {
 	// Cxkk - RND Vx, byte
-	m.registers[decodeX(opcode)] = uint8(rand.Intn(0x100)) & decodeByte(opcode)
+	vm.registers[decodeX(opcode)] = uint8(rand.Intn(0x100)) & decodeByte(opcode)
 	return nil
 }
 
-func (m *Machine) executeOpD(opcode uint16) error {
+func (vm *VirtualMachine) executeOpD(opcode uint16) error {
 	// Dxyn - DRW Vx, Vy, nibb
-	vx := m.registers[decodeX(opcode)]
-	vy := m.registers[decodeY(opcode)]
+	vx := vm.registers[decodeX(opcode)]
+	vy := vm.registers[decodeY(opcode)]
 
-	if m.Screen.SetSprite(vx, vy, m.memory[m.i:m.i+uint16(decodeNibb(opcode))]...) {
-		m.registers[0xF] = 1
+	if vm.Screen.SetSprite(vx, vy, vm.memory[vm.i:vm.i+uint16(decodeNibb(opcode))]...) {
+		vm.registers[0xF] = 1
 	} else {
-		m.registers[0xF] = 0
+		vm.registers[0xF] = 0
 	}
 
 	return nil
 }
 
-func (m *Machine) executeOpE(opcode uint16) error {
+func (vm *VirtualMachine) executeOpE(opcode uint16) error {
 	x := decodeX(opcode)
 
 	switch decodeByte(opcode) {
 	// Ex9E - SKP Vx
 	case 0x9E:
-		if m.Keyboard.IsKeyPressed(m.registers[x]) {
-			m.pc += 2
+		if vm.Keyboard.IsKeyPressed(vm.registers[x]) {
+			vm.pc += 2
 		}
 
 	// ExA1 - SKNP Vx
 	case 0xA1:
-		if !m.Keyboard.IsKeyPressed(m.registers[x]) {
-			m.pc += 2
+		if !vm.Keyboard.IsKeyPressed(vm.registers[x]) {
+			vm.pc += 2
 		}
 	}
 
 	return nil
 }
 
-func (m *Machine) executeOpF(opcode uint16) error {
+func (vm *VirtualMachine) executeOpF(opcode uint16) error {
 	x := decodeX(opcode)
 
 	switch decodeByte(opcode) {
 	// Fx07 - LD Vx, DT
 	case 0x07:
-		m.registers[x] = m.delay
+		vm.registers[x] = vm.delay
 
 	// Fx0A - LD Vx, K
 	case 0x0A:
-		if key, ok := m.Keyboard.PollKeyPress(); ok {
-			m.registers[x] = key
+		if key, ok := vm.Keyboard.PollKeyPress(); ok {
+			vm.registers[x] = key
 		} else {
-			m.pc -= 2
+			vm.pc -= 2
 		}
 
 	// Fx15 - LD DT, Vx
 	case 0x15:
-		m.delay = m.registers[x]
+		vm.delay = vm.registers[x]
 
 	// Fx18 - LD ST, Vx
 	case 0x18:
-		m.sound = m.registers[x]
+		vm.sound = vm.registers[x]
 
 	// Fx1E - ADD I, Vx
 	case 0x1E:
-		m.i += uint16(m.registers[x])
+		vm.i += uint16(vm.registers[x])
 
 	// Fx29 - LD F, Vx
 	case 0x29:
-		m.i = uint16(m.registers[x]) * FontSize
+		vm.i = uint16(vm.registers[x]) * FontSize
 
 	// Fx33 - LD B, Vx
 	case 0x33:
-		m.memory[m.i] = m.registers[x] / 100
-		m.memory[m.i+1] = (m.registers[x] % 100) / 10
-		m.memory[m.i+2] = m.registers[x] % 10
+		vm.memory[vm.i] = vm.registers[x] / 100
+		vm.memory[vm.i+1] = (vm.registers[x] % 100) / 10
+		vm.memory[vm.i+2] = vm.registers[x] % 10
 
 	// Fx55 - LD [I], Vx
 	case 0x55:
 		for i := uint16(0); i <= uint16(x); i++ {
-			m.memory[m.i+i] = m.registers[i]
+			vm.memory[vm.i+i] = vm.registers[i]
 		}
 
 	// Fx65 - LD Vx, [I]
 	case 0x65:
 		for i := uint16(0); i <= uint16(x); i++ {
-			m.registers[i] = m.memory[m.i+i]
+			vm.registers[i] = vm.memory[vm.i+i]
 		}
 	}
 

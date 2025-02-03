@@ -22,36 +22,36 @@ type Options struct {
 	TPS   int
 }
 
-type Interpreter struct {
+type Chip8 struct {
 	opts         Options
-	machine      *Machine
+	vm           *VirtualMachine
 	keyBuffer    [NumKeys]bool
 	lastKeyPress int
 	screenBuffer [ScreenSize]bool
 }
 
-func NewInterpreter(opts Options) *Interpreter {
-	interpreter := &Interpreter{
+func New(opts Options) *Chip8 {
+	interpreter := &Chip8{
 		opts:         opts,
 		keyBuffer:    [NumKeys]bool{},
 		lastKeyPress: -1,
 		screenBuffer: [ScreenSize]bool{},
 	}
 
-	interpreter.machine = NewMachine(interpreter, interpreter)
+	interpreter.vm = NewVirtualMachine(interpreter, interpreter)
 
 	return interpreter
 }
 
-func (c *Interpreter) LoadROM(filename string) error {
+func (c *Chip8) LoadROM(filename string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
-	return c.machine.LoadProgram(data...)
+	return c.vm.LoadProgram(data...)
 }
 
-func (c *Interpreter) Run() error {
+func (c *Chip8) Run() error {
 	log.Info("Initializing CHIP-8")
 
 	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_AUDIO); err != nil {
@@ -105,12 +105,12 @@ func (c *Interpreter) Run() error {
 			paused = !paused
 
 		case EventReset:
-			c.machine.Reset()
+			c.vm.Reset()
 			c.updateScreen(renderer, &rect)
 
 		case EventNextCycle:
 			if paused {
-				c.machine.RunCycle()
+				c.vm.RunCycle()
 				c.updateScreen(renderer, &rect)
 			}
 		}
@@ -120,12 +120,12 @@ func (c *Interpreter) Run() error {
 		}
 
 		for i := 0; i < c.opts.TPS; i++ {
-			if err := c.machine.RunCycle(); err != nil {
+			if err := c.vm.RunCycle(); err != nil {
 				log.Error(err)
 			}
 		}
 
-		c.machine.UpdateTimers()
+		c.vm.UpdateTimers()
 
 		c.updateScreen(renderer, &rect)
 	}
@@ -135,7 +135,7 @@ func (c *Interpreter) Run() error {
 	return nil
 }
 
-func (c *Interpreter) handleEvent() Event {
+func (c *Chip8) handleEvent() Event {
 	if event := sdl.PollEvent(); event != nil {
 		switch event.GetType() {
 		case sdl.QUIT:
@@ -149,7 +149,7 @@ func (c *Interpreter) handleEvent() Event {
 	return EventIgnore
 }
 
-func (c *Interpreter) handleKeyEvent(event *sdl.KeyboardEvent) Event {
+func (c *Chip8) handleKeyEvent(event *sdl.KeyboardEvent) Event {
 	pressed := event.GetType() == sdl.KEYDOWN
 
 	switch scancode := event.Keysym.Scancode; scancode {
@@ -186,7 +186,7 @@ func (c *Interpreter) handleKeyEvent(event *sdl.KeyboardEvent) Event {
 	return EventIgnore
 }
 
-func (c Interpreter) updateScreen(renderer *sdl.Renderer, rect *sdl.Rect) {
+func (c Chip8) updateScreen(renderer *sdl.Renderer, rect *sdl.Rect) {
 	renderer.SetDrawColor(0x00, 0x00, 0x00, 0xFF)
 	renderer.Clear()
 	renderer.SetDrawColor(0xFF, 0xFF, 0xFF, 0xFF)
@@ -206,11 +206,11 @@ func (c Interpreter) updateScreen(renderer *sdl.Renderer, rect *sdl.Rect) {
 // Keyboard
 //
 
-func (c *Interpreter) IsKeyPressed(key uint8) bool {
+func (c *Chip8) IsKeyPressed(key uint8) bool {
 	return c.keyBuffer[key]
 }
 
-func (c *Interpreter) PollKeyPress() (uint8, bool) {
+func (c *Chip8) PollKeyPress() (uint8, bool) {
 	if c.lastKeyPress != -1 {
 		key := uint8(c.lastKeyPress)
 		c.lastKeyPress = -1
@@ -223,13 +223,13 @@ func (c *Interpreter) PollKeyPress() (uint8, bool) {
 // Screen
 //
 
-func (c *Interpreter) ClearScreen() {
+func (c *Chip8) ClearScreen() {
 	for i := 0; i < len(c.screenBuffer); i++ {
 		c.screenBuffer[i] = false
 	}
 }
 
-func (c *Interpreter) SetSprite(x, y uint8, sprite ...uint8) bool {
+func (c *Chip8) SetSprite(x, y uint8, sprite ...uint8) bool {
 	flag := false
 
 	for i, b := range sprite {
