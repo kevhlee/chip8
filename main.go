@@ -20,12 +20,7 @@ func main() {
 		exit("Usage: chip8 <path to ROM>")
 	}
 
-	ch8 := chip8.New(opts)
-	if err := ch8.LoadROM(flag.Arg(0)); err != nil {
-		exit(err.Error())
-	}
-
-	if err := ch8.Run(); err != nil {
+	if err := chip8.Start(filename, opts); err != nil {
 		exit(err.Error())
 	}
 }
