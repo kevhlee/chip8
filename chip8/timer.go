@@ -8,7 +8,7 @@ func NewTimer() *Timer {
 	return &Timer{}
 }
 
-func (t Timer) Read() uint8 {
+func (t *Timer) Read() uint8 {
 	return t.value
 }
 

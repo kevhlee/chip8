@@ -28,7 +28,7 @@ func NewScreen(renderer *sdl.Renderer, scale int32) *Screen {
 	}
 }
 
-func (s Screen) Render() {
+func (s *Screen) Render() {
 	s.renderer.SetDrawColor(0x00, 0x00, 0x00, 0xFF)
 	s.renderer.Clear()
 	s.renderer.SetDrawColor(0xFF, 0xFF, 0xFF, 0xFF)
@@ -70,6 +70,6 @@ func (s *Screen) SetSprite(x, y uint8, sprite ...uint8) bool {
 	return flag
 }
 
-func (s Screen) getBufferIndex(x, y uint8) int {
+func (s *Screen) getBufferIndex(x, y uint8) int {
 	return (int(y%ScreenHeight) * ScreenWidth) + int(x%ScreenWidth)
 }
